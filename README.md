@@ -1,5 +1,7 @@
 # Toronto Building Permits Pipeline
 
+**[Live dashboard →](https://paramsngh.github.io/toronto-building-permits/)**
+
 An end to end data pipeline on City of Toronto building permit data, built with Azure Data Lake Storage, Azure Databricks and Power BI.
 
 The analytical question: **how long does the City of Toronto take to issue a building permit, and is it getting faster or slower?** Approval speed is regularly cited in the debate about housing supply in Toronto, and this data can measure it directly.
