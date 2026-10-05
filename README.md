@@ -1,6 +1,6 @@
 # Toronto Building Permits Pipeline
 
-**[Live dashboard →](https://paramsngh.github.io/toronto-building-permits/)**
+**[Live dashboard →](https://toronto-building-permits-1.onrender.com/)**
 
 An end to end data pipeline on City of Toronto building permit data, built with Azure Data Lake Storage, Azure Databricks and Power BI.
 
