@@ -39,7 +39,9 @@ permits.gold.fact_permits
 
 permits.gold.dim_postal_area
   postal_area  string
-  region       string   Scarborough, North York, Downtown and Central Toronto ...
+  region       string   Downtown Toronto, Midtown Toronto, East Toronto, East York,
+                        West Toronto, York, North York, Scarborough, Etobicoke,
+                        Northwest Toronto
 
 permits.gold.dim_status
   status  string
