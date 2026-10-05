@@ -3,510 +3,310 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Toronto Building Permits</title>
+<title>Toronto Building Permits | Analytics</title>
 <style>
 :root{
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  --bg:#f7f5f1; --grid:#e6e2d9; --surface:#fffefb; --line:#ded9ce;
-  --text:#1c1b18; --muted:#6e6a61; --faint:#9b968b;
-  --accent:#c2541c; --accent2:#1f6f6b; --soft:#f3e4d8;
+  --bg:#f5f7fb;--surface:#ffffff;--surface2:#f8fafc;--line:#e5eaf1;
+  --text:#172033;--muted:#667085;--faint:#98a2b3;--accent:#2563eb;--accent2:#0f766e;
+  --accentSoft:#eff6ff;--danger:#b42318;--shadow:0 10px 30px rgba(16,24,40,.07);
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-}
-:root:not([data-theme="light"]){
-  @media (prefers-color-scheme: dark){
-    --bg:#131416; --grid:#1d1f22; --surface:#1b1d20; --line:#2e3135;
-    --text:#eceae5; --muted:#9a968e; --faint:#6d6a64;
-    --accent:#e8884a; --accent2:#5fb5ad; --soft:#2b231c;
-  }
+  --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 :root[data-theme="dark"]{
-  --bg:#131416; --grid:#1d1f22; --surface:#1b1d20; --line:#2e3135;
-  --text:#eceae5; --muted:#9a968e; --faint:#6d6a64;
-  --accent:#e8884a; --accent2:#5fb5ad; --soft:#2b231c;
+  --bg:#0b1120;--surface:#111827;--surface2:#182132;--line:#263244;
+  --text:#f3f4f6;--muted:#a6adbb;--faint:#768196;--accent:#60a5fa;--accent2:#5eead4;
+  --accentSoft:#14233c;--danger:#f97066;--shadow:0 14px 36px rgba(0,0,0,.22);
 }
-*,*::before,*::after{box-sizing:inherit}
-html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px)}
-body{
-  margin:0; color:var(--text); font-family:var(--sans); font-size:16px; line-height:1.55;
-  background:
-    repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 28px),
-    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 28px),
-    var(--bg);
-  -webkit-font-smoothing:antialiased;
-}
-.wrap{max-width:1080px; margin:0 auto; padding:30px 18px 70px}
-
-/* header */
-.top{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap}
-h1{font-size:1.8rem; line-height:1.15; margin:0 0 6px; letter-spacing:-0.015em}
-h1 .tag{font-family:var(--mono); font-size:.62em; color:var(--accent); vertical-align:middle;
-  border:1px solid var(--accent); border-radius:4px; padding:2px 6px; margin-left:9px; letter-spacing:.04em}
-.sub{color:var(--muted); margin:0; max-width:60ch; font-size:.95rem}
-.themebtn{
-  font-family:var(--mono); font-size:.72rem; letter-spacing:.06em; color:var(--muted);
-  background:var(--surface); border:1px solid var(--line); border-radius:7px;
-  padding:7px 11px; cursor:pointer;
-}
-.themebtn:hover{color:var(--text)}
-
-/* region rail */
-.rail{display:flex; gap:7px; flex-wrap:wrap; margin:26px 0 6px}
-.rchip{
-  font-family:var(--mono); font-size:.76rem; letter-spacing:.02em; cursor:pointer;
-  background:var(--surface); color:var(--muted);
-  border:1px solid var(--line); border-radius:7px; padding:7px 11px;
-  transition:background .12s, color .12s, border-color .12s;
-}
-.rchip:hover{color:var(--text); border-color:var(--faint)}
-.rchip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff}
-.scope{font-family:var(--mono); font-size:.72rem; color:var(--faint); margin:0 0 22px}
-
-/* kpis */
-.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:11px}
-.kpi{background:var(--surface); border:1px solid var(--line); border-radius:11px; padding:15px 15px 13px; position:relative; overflow:hidden}
-.kpi::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent); opacity:.8}
-.kpi .v{font-size:1.6rem; font-weight:650; letter-spacing:-0.02em; line-height:1.15; font-variant-numeric:tabular-nums}
-.kpi .l{font-size:.78rem; color:var(--muted); margin-top:5px; line-height:1.35}
-
-/* layout */
-h2{font-size:.78rem; font-family:var(--mono); letter-spacing:.11em; text-transform:uppercase;
-  color:var(--faint); margin:40px 0 13px; font-weight:500}
-.cols{display:grid; grid-template-columns:1.55fr 1fr; gap:14px}
-@media (max-width:820px){ .cols{grid-template-columns:1fr} }
-.card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:17px; position:relative}
-.card h3{margin:0; font-size:.98rem}
-.cardhead{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:3px; flex-wrap:wrap}
-.note{margin:0 0 13px; font-size:.79rem; color:var(--muted)}
-
-/* toggle */
-.seg{display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden}
-.seg button{
-  font-family:var(--mono); font-size:.71rem; letter-spacing:.03em; cursor:pointer;
-  background:transparent; color:var(--muted); border:0; padding:6px 10px;
-}
-.seg button[aria-pressed="true"]{background:var(--accent); color:#fff}
-
-svg{display:block; width:100%; height:auto; max-width:100%}
-.chartbox{position:relative}
-.tip{
-  position:absolute; pointer-events:none; opacity:0; transform:translate(-50%,-115%);
-  background:var(--text); color:var(--bg); font-family:var(--mono); font-size:.72rem;
-  padding:5px 9px; border-radius:6px; white-space:nowrap; transition:opacity .1s; z-index:5;
-}
-.insight{
-  margin-top:13px; padding-top:13px; border-top:1px dashed var(--line);
-  font-size:.86rem; color:var(--muted);
-}
-.insight b{color:var(--text); font-weight:600}
-
-/* mix rows */
-.mix{display:flex; flex-direction:column; gap:9px; margin-top:2px}
-.mixrow{display:grid; grid-template-columns:78px 1fr 50px; align-items:center; gap:9px; font-size:.79rem}
-.mixrow .bar{height:16px; background:var(--soft); border-radius:3px; overflow:hidden}
-.mixrow .bar i{display:block; height:100%; background:var(--accent2); border-radius:3px; transition:width .5s cubic-bezier(.2,.8,.3,1)}
-.mixrow .n{text-align:right; font-family:var(--mono); font-size:.74rem; color:var(--muted); font-variant-numeric:tabular-nums}
-.mixrow .k{color:var(--muted)}
-
-/* ask */
-.row{display:flex; gap:8px; margin-bottom:11px}
-input[type=text]{
-  flex:1; min-width:0; font:inherit; font-size:.94rem; color:var(--text);
-  background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:11px 13px;
-}
-input[type=text]:focus{outline:2px solid var(--accent); outline-offset:-1px}
-.go{font:inherit; font-size:.9rem; font-weight:550; cursor:pointer; background:var(--accent);
-  color:#fff; border:0; border-radius:8px; padding:11px 19px}
-.go:disabled{opacity:.55; cursor:not-allowed}
-.chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px}
-.chip{font-family:var(--mono); font-size:.73rem; background:transparent; color:var(--muted);
-  border:1px solid var(--line); border-radius:999px; padding:6px 11px; cursor:pointer}
-.chip:hover{color:var(--text); border-color:var(--faint)}
-.answer{border-top:1px solid var(--line); padding-top:15px; min-height:120px}
-.badge{font-family:var(--mono); font-size:.68rem; letter-spacing:.07em; text-transform:uppercase;
-  color:var(--accent); background:var(--soft); border-radius:5px; padding:3px 8px}
-.big{font-size:1.45rem; font-weight:650; margin:11px 0 2px; font-variant-numeric:tabular-nums}
-.cap{font-family:var(--mono); font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); margin:15px 0 6px}
-pre{margin:0; background:var(--bg); border:1px solid var(--line); border-radius:8px;
-  padding:12px; font-size:.79rem; line-height:1.55; overflow-x:auto; font-family:var(--mono)}
-.meta{font-size:.76rem; color:var(--faint); margin-top:10px}
-.cursor{display:inline-block; width:7px; height:1em; background:var(--accent);
-  vertical-align:-2px; animation:bl 1s steps(2) infinite}
-@keyframes bl{50%{opacity:0}}
-
-footer{margin-top:44px; padding-top:18px; border-top:1px solid var(--line); font-size:.8rem; color:var(--muted)}
-footer ul{margin:8px 0 0; padding-left:17px}
-footer li{margin:3px 0}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:26px 22px 64px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:750;letter-spacing:-.02em}
+.logo{width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,var(--accent),var(--accent2));display:grid;place-items:center;color:white;font-weight:800}
+.navright{display:flex;gap:8px}
+.iconbtn{border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 11px;border-radius:10px;cursor:pointer}
+.hero{display:grid;grid-template-columns:1.4fr .6fr;gap:20px;align-items:end;margin-bottom:24px}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-size:clamp(2rem,4vw,3.55rem);line-height:1.02;letter-spacing:-.055em;margin:8px 0 12px;max-width:780px}
+.hero p{color:var(--muted);max-width:720px;margin:0;font-size:1rem}
+.heroMeta{text-align:right;color:var(--muted);font-size:.8rem}
+.heroMeta b{display:block;color:var(--text);font-size:1rem;margin-bottom:3px}
+.rail{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 12px;scrollbar-width:thin}
+.rchip{white-space:nowrap;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 13px;cursor:pointer;font-size:.8rem}
+.rchip:hover{border-color:var(--accent);color:var(--text)}
+.rchip[aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--surface)}
+.scope{font-family:var(--mono);font-size:.72rem;color:var(--faint);margin:2px 0 17px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:17px;box-shadow:var(--shadow);min-width:0}
+.kpi .icon{font-size:.68rem;font-family:var(--mono);color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:15px}
+.kpi .v{font-size:1.65rem;font-weight:750;letter-spacing:-.04em;white-space:nowrap}
+.kpi .l{font-size:.78rem;color:var(--muted);margin-top:4px}
+.sectionHead{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:38px 0 12px}
+.sectionHead h2{font-size:1.18rem;margin:0;letter-spacing:-.02em}
+.sectionHead p{font-size:.8rem;color:var(--muted);margin:0}
+.grid2{display:grid;grid-template-columns:1.45fr .8fr;gap:14px}
+.gridEqual{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);min-width:0}
+.cardhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:2px}
+.card h3{font-size:.96rem;margin:0}
+.note{font-size:.78rem;color:var(--muted);margin:3px 0 15px}
+.seg{display:flex;background:var(--surface2);border:1px solid var(--line);padding:3px;border-radius:9px}
+.seg button{border:0;background:transparent;color:var(--muted);padding:5px 9px;border-radius:6px;font-family:var(--mono);font-size:.68rem;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.chartbox{position:relative;min-height:210px}
+svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-118%);background:var(--text);color:var(--surface);font-family:var(--mono);font-size:.7rem;padding:6px 9px;border-radius:7px;white-space:nowrap;z-index:8;transition:opacity .1s}
+.mix{display:flex;flex-direction:column;gap:11px}
+.mixrow{display:grid;grid-template-columns:82px 1fr 52px;align-items:center;gap:9px;font-size:.78rem}
+.mixrow .bar{height:10px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.mixrow .bar i{display:block;height:100%;background:var(--accent2);border-radius:99px;transition:width .45s}
+.mixrow .n{text-align:right;font-family:var(--mono);font-size:.7rem;color:var(--muted)}
+.mapWrap{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;align-items:center}
+.map{position:relative;aspect-ratio:1.35/1;max-height:430px}
+.map svg{height:100%;width:100%}
+.zone{stroke:var(--surface);stroke-width:5;cursor:pointer;transition:opacity .15s,transform .15s;transform-origin:center}
+.zone:hover{opacity:.82}
+.zone.active{stroke:var(--text);stroke-width:6}
+.maplabel{pointer-events:none;font-size:12px;font-weight:700;fill:white;text-anchor:middle}
+.mapSide{display:flex;flex-direction:column;gap:9px}
+.mapStat{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.mapStat span{display:block;color:var(--muted);font-size:.72rem}
+.mapStat b{font-size:1rem}
+.legend{font-size:.72rem;color:var(--muted);margin-top:8px}
+.donutWrap{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center}
+.donut{width:145px;height:145px;border-radius:50%;position:relative;margin:auto}
+.donut:after{content:"";position:absolute;inset:26px;background:var(--surface);border-radius:50%}
+.donutCenter{position:absolute;inset:0;display:grid;place-items:center;z-index:2;text-align:center;font-size:.72rem;color:var(--muted);pointer-events:none}
+.donutCenter b{display:block;font-size:1rem;color:var(--text)}
+.legendList{display:flex;flex-direction:column;gap:8px}
+.legendItem{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center;font-size:.76rem;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.aiCard{background:linear-gradient(145deg,var(--surface),var(--accentSoft));border-color:color-mix(in srgb,var(--accent) 24%,var(--line))}
+.askTitle{display:flex;gap:12px;align-items:center}
+.spark{width:38px;height:38px;border-radius:12px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800}
+.row{display:flex;gap:9px;margin:16px 0 10px}
+input[type=text]{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:11px;padding:12px 14px}
+input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px}
+.go{border:0;background:var(--accent);color:white;border-radius:11px;padding:11px 20px;font-weight:650;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 10px;font-size:.72rem;cursor:pointer}
+.answer{margin-top:15px;border-top:1px solid var(--line);padding-top:15px;min-height:90px}
+.badge{font-family:var(--mono);font-size:.67rem;text-transform:uppercase;color:var(--accent);background:var(--accentSoft);padding:4px 7px;border-radius:6px}
+.big{font-size:1.45rem;font-weight:750;margin:10px 0 2px}
+.cap{font-family:var(--mono);font-size:.67rem;text-transform:uppercase;color:var(--faint);margin:14px 0 6px}
+pre{margin:0;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-family:var(--mono);font-size:.76rem;line-height:1.5}
+.meta{font-size:.72rem;color:var(--faint);margin-top:8px}
+footer{margin-top:38px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.76rem}
+footer p{margin:4px 0}
+@media(max-width:950px){.kpis{grid-template-columns:repeat(3,1fr)}.hero{grid-template-columns:1fr}.heroMeta{text-align:left}.grid2,.gridEqual,.mapWrap{grid-template-columns:1fr}}
+@media(max-width:620px){.wrap{padding:18px 13px 48px}.kpis{grid-template-columns:1fr 1fr}.kpi:last-child{grid-column:1/-1}.row{flex-direction:column}.go{width:100%}.donutWrap{grid-template-columns:1fr}.maplabel{font-size:10px}}
 </style>
 </head>
 <body>
 <div class="wrap">
+<nav class="nav">
+  <div class="brand"><div class="logo">TO</div><span>Building Permit Intelligence</span></div>
+  <div class="navright"><button class="iconbtn" id="themeBtn">Theme</button></div>
+</nav>
 
-<div class="top">
+<header class="hero">
   <div>
-    <h1>Toronto Building Permits<span class="tag">2020&ndash;2026</span></h1>
-    <p class="sub">How long the City takes to issue a permit, where construction is happening, and what is being built. Pick a region to filter everything on the page.</p>
+    <div class="eyebrow">City of Toronto open data · Analytics project</div>
+    <h1>Where Toronto is building, and how fast.</h1>
+    <p>Explore permit volume, approval speed, housing creation and declared construction value across Toronto. Select a region and every visual updates instantly.</p>
   </div>
-  <button class="themebtn" id="themeBtn">THEME</button>
-</div>
+  <div class="heroMeta"><b>2020 to 2026</b>Snapshot through 14 September 2026<br>2026 is a partial year</div>
+</header>
 
 <div class="rail" id="rail"></div>
 <p class="scope" id="scope"></p>
-
 <div class="kpis" id="kpis"></div>
 
-<h2>Approval times and volume</h2>
-<div class="cols">
+<div class="sectionHead"><div><h2>Activity over time</h2><p>Permit volume and approval speed for the selected region.</p></div></div>
+<div class="grid2">
   <div class="card">
-    <div class="cardhead">
-      <h3 id="trendTitle">Median days to issue</h3>
-      <div class="seg">
-        <button id="mMed" aria-pressed="true">DAYS</button>
-        <button id="mVol" aria-pressed="false">PERMITS</button>
-      </div>
-    </div>
-    <p class="note" id="trendNote">By year applied. 2025 onward excluded while permits are still being decided.</p>
-    <div class="chartbox">
-      <div id="trendChart"></div>
-      <div class="tip" id="tip"></div>
-    </div>
+    <div class="cardhead"><h3 id="trendTitle">Median days to issue</h3><div class="seg"><button id="mMed" aria-pressed="true">Days</button><button id="mVol" aria-pressed="false">Permits</button></div></div>
+    <p class="note" id="trendNote"></p>
+    <div class="chartbox"><div id="trendChart"></div><div class="tip" id="tip"></div></div>
   </div>
-
   <div class="card">
-    <div class="cardhead"><h3>What is being built</h3></div>
-    <p class="note">Permit counts by type of work.</p>
-    <div class="mix" id="mix"></div>
+    <div class="cardhead"><h3>Permit mix</h3></div>
+    <p class="note">What kind of work is being permitted.</p>
+    <div class="donutWrap"><div style="position:relative"><div class="donut" id="donut"></div><div class="donutCenter" id="donutCenter"></div></div><div class="legendList" id="mixLegend"></div></div>
   </div>
 </div>
 
-<h2>Compare regions</h2>
+<div class="sectionHead"><div><h2>Explore Toronto</h2><p>Approximate region layout based on your postal area groupings. Click a region to filter.</p></div></div>
 <div class="card">
-  <p class="note">Click a bar to filter the page. Regions are derived from the postal area, so they are approximate.</p>
-  <div class="chartbox">
-    <div id="regionChart"></div>
-    <div class="tip" id="tip2"></div>
+  <div class="mapWrap">
+    <div class="map" id="map"></div>
+    <div class="mapSide">
+      <div class="mapStat"><span>Selected area</span><b id="mapName"></b></div>
+      <div class="mapStat"><span>Permits since 2020</span><b id="mapPermits"></b></div>
+      <div class="mapStat"><span>Homes created</span><b id="mapHomes"></b></div>
+      <div class="mapStat"><span>Median approval</span><b id="mapMedian"></b></div>
+      <div class="legend">The map is a geographic schematic for orientation, not an official boundary map. Postal FSAs do not perfectly match neighbourhood boundaries.</div>
+    </div>
   </div>
 </div>
 
-<h2>Ask a question</h2>
-<div class="card">
-  <p class="note">Plain English in, SQL out. The generated query is shown with every answer so you can check what actually ran.</p>
-  <div class="row">
-    <input type="text" id="q" placeholder="How many permits were issued in Scarborough in 2025?" autocomplete="off">
-    <button class="go" id="askBtn">Ask</button>
-  </div>
+<div class="sectionHead"><div><h2>Compare regions</h2><p>See where permit activity and housing creation are concentrated.</p></div></div>
+<div class="gridEqual">
+  <div class="card"><div class="cardhead"><h3>Permits by region</h3></div><p class="note">Click a bar to filter the dashboard.</p><div class="chartbox"><div id="regionChart"></div><div class="tip" id="tip2"></div></div></div>
+  <div class="card"><div class="cardhead"><h3>Homes created by region</h3></div><p class="note">Dwelling units created on non cancelled permits.</p><div class="chartbox"><div id="homesChart"></div><div class="tip" id="tip3"></div></div></div>
+</div>
+
+<div class="sectionHead"><div><h2>Permit composition</h2><p>Detailed work type mix for the selected region.</p></div></div>
+<div class="gridEqual">
+  <div class="card"><div class="cardhead"><h3>Work type breakdown</h3></div><p class="note">Counts by permit work category.</p><div class="mix" id="mix"></div></div>
+  <div class="card"><div class="cardhead"><h3>Cancellation rate</h3></div><p class="note">Share of permits marked cancelled or dormant by region.</p><div class="chartbox"><div id="cancelChart"></div><div class="tip" id="tip4"></div></div></div>
+</div>
+
+<div class="sectionHead"><div><h2>Ask the data</h2><p>Natural language to validated Databricks SQL.</p></div></div>
+<div class="card aiCard">
+  <div class="askTitle"><div class="spark">AI</div><div><h3>Building Permit Analyst</h3><p class="note" style="margin:2px 0 0">Ask a question. The generated SQL is shown with every answer so you can verify what ran.</p></div></div>
+  <div class="row"><input type="text" id="q" placeholder="Which region issued the most permits in 2024?" autocomplete="off"><button class="go" id="askBtn">Ask</button></div>
   <div class="chips">
-    <button class="chip" data-q="How many permits were issued in Scarborough in 2025?">Permits in Scarborough</button>
-    <button class="chip" data-q="What is the median approval time for new houses?">Approval time, new houses</button>
-    <button class="chip" data-q="Which region created the most homes since 2020?">Most homes created</button>
+    <button class="chip" data-q="How many permits were issued in Scarborough in 2025?">Scarborough permits</button>
+    <button class="chip" data-q="Which region created the most homes since 2020?">Most homes</button>
+    <button class="chip" data-q="Which region has the shortest median approval time?">Fastest approvals</button>
     <button class="chip" data-q="How many permits were cancelled last year?">Cancellations</button>
   </div>
   <div class="answer" id="answer"></div>
 </div>
 
 <footer>
-  <strong>Reading these numbers</strong>
-  <ul>
-    <li>Construction values are declared by the applicant and are not appraised. About 84% of permits carry a usable figure, so totals understate real activity.</li>
-    <li>Counts cover main permits only. Plumbing, drain and HVAC permits that duplicate a main permit on the same project are excluded, since one project can otherwise be counted four times. Standalone trade jobs are kept.</li>
-    <li>9,082 permits have no postal code and appear under Unknown. Every number on this page comes from the gold layer table permits.gold.ui_summary.</li>
-    <li>Snapshot taken 14 September 2026 from City of Toronto Open Data. 152,937 permits applied for since 2020.</li>
-  </ul>
+  <p><b>About the data.</b> Counts cover main permits and standalone trade jobs. Duplicate plumbing, drain and HVAC permits attached to a main project are excluded.</p>
+  <p>Construction values are applicant declared and may understate total activity. Permits without usable postal geography appear under Unknown. Region boundaries are approximate FSA groupings.</p>
+  <p>Source: City of Toronto Open Data. Dashboard metrics are served from <span style="font-family:var(--mono)">permits.gold.ui_summary</span>.</p>
 </footer>
-
 </div>
 
 <script>
-// Paste the backend URL here once deployed.
 const API_URL = "https://toronto-building-permits.onrender.com";
-
-const DATA = {"Central Toronto":{"permits":104,"homes":0,"value":1180702847.0,"median":34,"byYear":{"2020":9,"2021":17,"2022":12,"2023":22,"2024":12,"2025":15,"2026":17},"medByYear":{"2020":31,"2021":56,"2022":30,"2023":8,"2024":35},"mix":{"Renovation":57,"New build":0,"Trade":1,"Demolition":3,"Other":43},"cancelled":10},"Downtown and Central Toronto":{"permits":21087,"homes":32103,"value":24833650860.0,"median":28,"byYear":{"2020":2893,"2021":3119,"2022":3159,"2023":2886,"2024":3344,"2025":3362,"2026":2324},"medByYear":{"2020":28,"2021":30,"2022":32,"2023":30,"2024":28},"mix":{"Renovation":13419,"New build":1267,"Trade":1667,"Demolition":855,"Other":3879},"cancelled":1787},"East and Central Toronto":{"permits":32391,"homes":23702,"value":19774273935.0,"median":23,"byYear":{"2020":4793,"2021":5408,"2022":5137,"2023":4383,"2024":4799,"2025":4553,"2026":3318},"medByYear":{"2020":26,"2021":25,"2022":28,"2023":25,"2024":18},"mix":{"Renovation":22166,"New build":2231,"Trade":4133,"Demolition":1313,"Other":2548},"cancelled":3041},"Etobicoke":{"permits":7724,"homes":6586,"value":3287285520.0,"median":31,"byYear":{"2020":1124,"2021":1295,"2022":1145,"2023":1034,"2024":1195,"2025":1149,"2026":782},"medByYear":{"2020":27,"2021":35,"2022":52,"2023":39,"2024":25},"mix":{"Renovation":4259,"New build":1009,"Trade":1227,"Demolition":665,"Other":564},"cancelled":703},"Etobicoke and Northwest":{"permits":12429,"homes":11169,"value":7850462954.0,"median":29,"byYear":{"2020":1709,"2021":1817,"2022":1647,"2023":1740,"2024":2017,"2025":2094,"2026":1405},"medByYear":{"2020":27,"2021":36,"2022":52,"2023":40,"2024":21},"mix":{"Renovation":6983,"New build":1018,"Trade":2402,"Demolition":658,"Other":1368},"cancelled":1220},"North York":{"permits":18573,"homes":18070,"value":13247027880.0,"median":28,"byYear":{"2020":2726,"2021":2791,"2022":3163,"2023":2434,"2024":2763,"2025":2773,"2026":1923},"medByYear":{"2020":32,"2021":28,"2022":28,"2023":31,"2024":26},"mix":{"Renovation":9057,"New build":2792,"Trade":2944,"Demolition":1626,"Other":2154},"cancelled":1907},"Scarborough":{"permits":19591,"homes":14861,"value":11125913085.0,"median":29,"byYear":{"2020":2523,"2021":3033,"2022":2935,"2023":2786,"2024":2949,"2025":3162,"2026":2203},"medByYear":{"2020":31,"2021":34,"2022":43,"2023":30,"2024":20},"mix":{"Renovation":11973,"New build":2599,"Trade":2145,"Demolition":1010,"Other":1864},"cancelled":2497},"Unknown":{"permits":9082,"homes":14647,"value":13306731089.0,"median":33,"byYear":{"2020":1194,"2021":1696,"2022":1200,"2023":1272,"2024":1249,"2025":1534,"2026":937},"medByYear":{"2020":41,"2021":47,"2022":36,"2023":33,"2024":28},"mix":{"Renovation":4283,"New build":1260,"Trade":1054,"Demolition":89,"Other":2396},"cancelled":800},"West Toronto":{"permits":31956,"homes":22463,"value":12994326106.0,"median":24,"byYear":{"2020":4510,"2021":5102,"2022":4686,"2023":4457,"2024":4942,"2025":4657,"2026":3602},"medByYear":{"2020":22,"2021":27,"2022":30,"2023":28,"2024":21},"mix":{"Renovation":22183,"New build":2435,"Trade":3917,"Demolition":1184,"Other":2237},"cancelled":3262},"All Toronto":{"permits":152937,"homes":143601,"value":107600374276.0,"median":28,"byYear":{"2020":21481,"2021":24278,"2022":23084,"2023":21014,"2024":23270,"2025":23299,"2026":16511},"medByYear":{"2020":28,"2021":30,"2022":34,"2023":29,"2024":23},"mix":{"Renovation":94380,"New build":14611,"Trade":19490,"Demolition":7403,"Other":17053},"cancelled":15227}};
-
-const ORDER = ["All Toronto", "East and Central Toronto", "West Toronto", "Downtown and Central Toronto", "Scarborough", "North York", "Etobicoke and Northwest", "Etobicoke", "Unknown", "Central Toronto"];
-
+const DATA = {"Midtown Toronto":{"permits":16930,"homes":15457,"value":12205322114.0,"median":27,"cancelled":1398,"byYear":{"2020":2476,"2021":2769,"2022":2602,"2023":2408,"2024":2563,"2025":2403,"2026":1709},"medByYear":{"2020":27,"2021":28,"2022":34,"2023":29,"2024":25},"mix":{"Renovation":10798,"New build":1771,"Trade":1637,"Demolition":1180,"Other":1544}},"North York":{"permits":18573,"homes":18070,"value":13247027880.0,"median":28,"cancelled":1907,"byYear":{"2020":2726,"2021":2791,"2022":3163,"2023":2434,"2024":2763,"2025":2773,"2026":1923},"medByYear":{"2020":32,"2021":28,"2022":28,"2023":31,"2024":26},"mix":{"Renovation":9057,"New build":2792,"Trade":2944,"Demolition":1626,"Other":2154}},"Etobicoke":{"permits":13954,"homes":15114,"value":9051077537.0,"median":29,"cancelled":1233,"byYear":{"2020":2004,"2021":2218,"2022":1977,"2023":1952,"2024":2202,"2025":2259,"2026":1342},"medByYear":{"2020":24,"2021":35,"2022":49,"2023":40,"2024":21},"mix":{"Renovation":7550,"New build":1657,"Trade":2555,"Demolition":1119,"Other":1073}},"East York":{"permits":10243,"homes":5840,"value":6244901636.0,"median":21,"cancelled":997,"byYear":{"2020":1507,"2021":1709,"2022":1605,"2023":1388,"2024":1542,"2025":1388,"2026":1104},"medByYear":{"2020":26,"2021":25,"2022":26,"2023":22,"2024":16},"mix":{"Renovation":6564,"New build":955,"Trade":1621,"Demolition":485,"Other":618}},"Downtown Toronto":{"permits":14133,"homes":28564,"value":22506737672.0,"median":29,"cancelled":1189,"byYear":{"2020":1830,"2021":1962,"2022":2088,"2023":1934,"2024":2284,"2025":2383,"2026":1652},"medByYear":{"2020":29,"2021":30,"2022":31,"2023":29,"2024":29},"mix":{"Renovation":9192,"New build":320,"Trade":931,"Demolition":259,"Other":3431}},"York":{"permits":12404,"homes":8193,"value":4713151869.0,"median":30,"cancelled":1235,"byYear":{"2020":1792,"2021":2071,"2022":1781,"2023":1709,"2024":1821,"2025":1778,"2026":1452},"medByYear":{"2020":25,"2021":32,"2022":41,"2023":34,"2024":29},"mix":{"Renovation":7308,"New build":1772,"Trade":1706,"Demolition":807,"Other":811}},"Scarborough":{"permits":19591,"homes":14861,"value":11125913085.0,"median":29,"cancelled":2497,"byYear":{"2020":2523,"2021":3033,"2022":2935,"2023":2786,"2024":2949,"2025":3162,"2026":2203},"medByYear":{"2020":31,"2021":34,"2022":43,"2023":30,"2024":20},"mix":{"Renovation":11973,"New build":2599,"Trade":2145,"Demolition":1010,"Other":1864}},"West Toronto":{"permits":19552,"homes":14270,"value":8281174236.0,"median":21,"cancelled":2027,"byYear":{"2020":2718,"2021":3031,"2022":2905,"2023":2748,"2024":3121,"2025":2879,"2026":2150},"medByYear":{"2020":21,"2021":24,"2022":26,"2023":24,"2024":16},"mix":{"Renovation":14875,"New build":663,"Trade":2211,"Demolition":377,"Other":1426}},"Northwest Toronto":{"permits":6199,"homes":2641,"value":2086670937.0,"median":33,"cancelled":690,"byYear":{"2020":829,"2021":894,"2022":815,"2023":822,"2024":1010,"2025":984,"2026":845},"medByYear":{"2020":30,"2021":39,"2022":59,"2023":38,"2024":28},"mix":{"Renovation":3692,"New build":370,"Trade":1074,"Demolition":204,"Other":859}},"Unknown":{"permits":9082,"homes":14647,"value":13306731089.0,"median":33,"cancelled":800,"byYear":{"2020":1194,"2021":1696,"2022":1200,"2023":1272,"2024":1249,"2025":1534,"2026":937},"medByYear":{"2020":41,"2021":47,"2022":36,"2023":33,"2024":28},"mix":{"Renovation":4283,"New build":1260,"Trade":1054,"Demolition":89,"Other":2396}},"East Toronto":{"permits":12276,"homes":5944,"value":4831666221.0,"median":21,"cancelled":1254,"byYear":{"2020":1882,"2021":2104,"2022":2013,"2023":1561,"2024":1766,"2025":1756,"2026":1194},"medByYear":{"2020":25,"2021":24,"2022":23,"2023":23,"2024":13},"mix":{"Renovation":9088,"New build":452,"Trade":1612,"Demolition":247,"Other":877}},"All Toronto":{"permits":152937,"homes":143601,"value":107600374276.0,"median":28,"cancelled":15227,"byYear":{"2020":21481,"2021":24278,"2022":23084,"2023":21014,"2024":23270,"2025":23299,"2026":16511},"medByYear":{"2020":28,"2021":30,"2022":34,"2023":29,"2024":23},"mix":{"Renovation":94380,"New build":14611,"Trade":19490,"Demolition":7403,"Other":17053}}};
+const ORDER = ["All Toronto", "Downtown Toronto", "Midtown Toronto", "East Toronto", "East York", "West Toronto", "York", "North York", "Scarborough", "Etobicoke", "Northwest Toronto", "Unknown"];
 let region = "All Toronto";
 let metric = "median";
 
-/* ---------- theme ---------- */
-const themeBtn = document.getElementById("themeBtn");
-try{
-  const saved = localStorage.getItem("permits-theme");
-  if (saved) document.documentElement.dataset.theme = saved;
-}catch(e){}
-themeBtn.addEventListener("click", () => {
-  const dark = getComputedStyle(document.body).backgroundColor.match(/\d+/g)[0] < 100;
-  const next = dark ? "light" : "dark";
-  document.documentElement.dataset.theme = next;
-  try{ localStorage.setItem("permits-theme", next); }catch(e){}
-  render();
-});
+const nf = n => Math.round(Number(n)||0).toLocaleString();
+const money = v => v>=1e9 ? "$"+(v/1e9).toFixed(1)+"B" : v>=1e6 ? "$"+(v/1e6).toFixed(0)+"M" : "$"+nf(v);
+const pct = v => (Number(v)||0).toFixed(1)+"%";
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-/* ---------- formatting ---------- */
-const nf = n => Math.round(n).toLocaleString();
-const money = v => v >= 1e9 ? "$" + (v/1e9).toFixed(1) + "B"
-                 : v >= 1e6 ? "$" + (v/1e6).toFixed(0) + "M" : "$" + nf(v);
+const themeBtn=document.getElementById("themeBtn");
+try{const saved=localStorage.getItem("permits-theme");if(saved)document.documentElement.dataset.theme=saved}catch(e){}
+themeBtn.onclick=()=>{const next=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=next;try{localStorage.setItem("permits-theme",next)}catch(e){};render()};
 
-/* count up animation */
-function countUp(el, to, fmt){
-  const from = Number(el.dataset.v || 0);
-  const t0 = performance.now(), dur = 520;
-  el.dataset.v = to;
-  (function step(t){
-    const p = Math.min(1, (t - t0) / dur);
-    const e = 1 - Math.pow(1 - p, 3);
-    el.textContent = fmt(from + (to - from) * e);
-    if (p < 1) requestAnimationFrame(step);
-  })(t0);
-}
+document.getElementById("rail").innerHTML=ORDER.map(r=>`<button class="rchip" data-r="${r}" aria-pressed="${r===region}">${r}</button>`).join("");
+document.querySelectorAll(".rchip").forEach(b=>b.onclick=()=>{region=b.dataset.r;render()});
 
-/* ---------- region rail ---------- */
-document.getElementById("rail").innerHTML = ORDER.map(r =>
-  `<button class="rchip" data-r="${r}" aria-pressed="${r === region}">${r}</button>`).join("");
-
-document.querySelectorAll(".rchip").forEach(b =>
-  b.addEventListener("click", () => { region = b.dataset.r; render(); }));
-
-/* ---------- KPI cards ---------- */
 function renderKpis(){
-  const d = DATA[region];
-  const cards = [
-    { v: d.permits,        l: "Permits since 2020",     f: nf },
-    { v: d.median,         l: "Median days to issue",   f: v => Math.round(v) + " days" },
-    { v: d.homes,          l: "Homes created",          f: nf },
-    { v: d.value,          l: "Declared value",         f: money },
-    { v: d.cancelled,      l: "Cancelled or dormant",   f: nf },
+  const d=DATA[region], rate=d.permits?d.cancelled/d.permits*100:0;
+  const cards=[
+    ["Volume",d.permits,"Permits since 2020",nf],
+    ["Speed",d.median,"Median days to issue",v=>Math.round(v)+" days"],
+    ["Housing",d.homes,"Homes created",nf],
+    ["Investment",d.value,"Declared value",money],
+    ["Cancelled",rate,"Cancellation rate",pct]
   ];
-  const box = document.getElementById("kpis");
-  if (box.children.length !== cards.length){
-    box.innerHTML = cards.map(c => `<div class="kpi"><div class="v">0</div><div class="l">${c.l}</div></div>`).join("");
-  }
-  [...box.children].forEach((el, i) => {
-    countUp(el.querySelector(".v"), cards[i].v, cards[i].f);
-    el.querySelector(".l").textContent = cards[i].l;
+  document.getElementById("kpis").innerHTML=cards.map(c=>`<div class="kpi"><div class="icon">${c[0]}</div><div class="v">${c[3](c[1])}</div><div class="l">${c[2]}</div></div>`).join("");
+}
+
+function wireTips(chartId,tipId){
+  const box=document.getElementById(chartId),tip=document.getElementById(tipId),svg=box.querySelector("svg"); if(!svg)return;
+  box.querySelectorAll(".hit").forEach(el=>{
+    el.onmouseenter=()=>{const rect=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal,sx=rect.width/vb.width,sy=rect.height/vb.height;tip.textContent=el.dataset.label+" · "+el.dataset.value;tip.style.left=(Number(el.dataset.x)*sx)+"px";tip.style.top=(Number(el.dataset.y)*sy)+"px";tip.style.opacity=1};
+    el.onmouseleave=()=>tip.style.opacity=0;
   });
 }
 
-/* ---------- trend chart ---------- */
 function renderTrend(){
-  const d = DATA[region];
-  const src = metric === "median" ? d.medByYear : d.byYear;
-  const years = Object.keys(src).map(Number).sort();
-  const vals = years.map(y => src[String(y)]);
-
-  document.getElementById("trendTitle").textContent =
-    metric === "median" ? "Median days to issue" : "Permits applied for";
-  document.getElementById("trendNote").textContent =
-    metric === "median"
-      ? "By year applied. 2025 onward excluded while permits are still being decided."
-      : "By year applied. 2026 is a partial year.";
-
-  const w = 500, h = 230, L = 42, R = 16, T = 22, B = 34;
-  const max = Math.max(...vals) * 1.22 || 1;
-  const x = i => L + i * (w - L - R) / Math.max(1, years.length - 1);
-  const y = v => h - B - (v / max) * (h - T - B);
-
-  let grid = "";
-  [0, max/2, max].forEach(t => {
-    grid += `<line x1="${L}" y1="${y(t)}" x2="${w-R}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/>`
-          + `<text x="${L-8}" y="${y(t)}" text-anchor="end" dominant-baseline="central" font-size="10"
-                  font-family="var(--mono)" fill="var(--faint)">${t >= 1000 ? Math.round(t/1000)+"k" : Math.round(t)}</text>`;
-  });
-
-  const line = vals.map((v,i) => `${x(i)},${y(v)}`).join(" ");
-  const area = `${L},${h-B} ${line} ${x(years.length-1)},${h-B}`;
-
-  let marks = "";
-  years.forEach((yr,i) => {
-    const partial = metric !== "median" && yr === 2026;
-    marks += `<circle cx="${x(i)}" cy="${y(vals[i])}" r="4.5" fill="var(--surface)"
-                stroke="var(--accent)" stroke-width="2.5" opacity="${partial ? .45 : 1}"/>`
-          + `<rect class="hit" x="${x(i)-20}" y="${T-10}" width="40" height="${h-T-B+20}" fill="transparent"
-                data-x="${x(i)}" data-y="${y(vals[i])}" data-label="${yr}"
-                data-value="${metric === 'median' ? vals[i] + ' days' : nf(vals[i]) + ' permits'}"/>`
-          + `<text x="${x(i)}" y="${h-11}" text-anchor="middle" font-size="10.5"
-                 font-family="var(--mono)" fill="var(--faint)">${yr}</text>`;
-  });
-
-  document.getElementById("trendChart").innerHTML =
-    `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${metric === 'median' ? 'Median days to issue' : 'Permits applied for'} by year in ${region}">
-       ${grid}
-       <polygon points="${area}" fill="var(--accent)" opacity="0.07"/>
-       <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5"
-                 stroke-linejoin="round" stroke-linecap="round"/>
-       ${marks}
-     </svg>`;
-
-  wireTips("trendChart", "tip");
+  const d=DATA[region],src=metric==="median"?d.medByYear:d.byYear,years=Object.keys(src).map(Number).sort(),vals=years.map(y=>src[String(y)]);
+  document.getElementById("trendTitle").textContent=metric==="median"?"Median days to issue":"Permits applied for";
+  document.getElementById("trendNote").textContent=metric==="median"?"By application year. 2025 onward excluded because recent approvals are incomplete.":"By application year. 2026 is a partial year.";
+  const w=620,h=255,L=45,R=18,T=18,B=36,max=Math.max(...vals)*1.18||1,x=i=>L+i*(w-L-R)/Math.max(1,years.length-1),y=v=>h-B-(v/max)*(h-T-B);
+  let grid="";[0,max/2,max].forEach(t=>grid+=`<line x1="${L}" y1="${y(t)}" x2="${w-R}" y2="${y(t)}" stroke="var(--line)"/><text x="${L-8}" y="${y(t)}" text-anchor="end" dominant-baseline="central" font-size="10" fill="var(--faint)" font-family="var(--mono)">${t>=1000?Math.round(t/1000)+"k":Math.round(t)}</text>`);
+  const line=vals.map((v,i)=>`${x(i)},${y(v)}`).join(" "),area=`${L},${h-B} ${line} ${x(years.length-1)},${h-B}`;
+  let marks="";years.forEach((yr,i)=>marks+=`<circle cx="${x(i)}" cy="${y(vals[i])}" r="4.5" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.5"/><rect class="hit" x="${x(i)-22}" y="${T}" width="44" height="${h-T-B}" fill="transparent" data-x="${x(i)}" data-y="${y(vals[i])}" data-label="${yr}" data-value="${metric==="median"?vals[i]+" days":nf(vals[i])+" permits"}"/><text x="${x(i)}" y="${h-11}" text-anchor="middle" font-size="10.5" fill="var(--faint)" font-family="var(--mono)">${yr}</text>`);
+  document.getElementById("trendChart").innerHTML=`<svg viewBox="0 0 ${w} ${h}">${grid}<polygon points="${area}" fill="var(--accent)" opacity=".08"/><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${marks}</svg>`;
+  wireTips("trendChart","tip");
 }
 
-/* ---------- mix ---------- */
+const donutColors=["var(--accent)","var(--accent2)","#8b5cf6","#f59e0b","#94a3b8"];
+function renderDonut(){
+  const d=DATA[region],keys=["Renovation","New build","Trade","Demolition","Other"],vals=keys.map(k=>d.mix[k]||0),total=vals.reduce((a,b)=>a+b,0)||1;
+  let acc=0,stops=[]; vals.forEach((v,i)=>{const start=acc/total*100;acc+=v;const end=acc/total*100;stops.push(`${donutColors[i]} ${start}% ${end}%`)});
+  document.getElementById("donut").style.background=`conic-gradient(${stops.join(",")})`;
+  document.getElementById("donutCenter").innerHTML=`<div><b>${nf(total)}</b>permits</div>`;
+  document.getElementById("mixLegend").innerHTML=keys.map((k,i)=>`<div class="legendItem"><i class="dot" style="background:${donutColors[i]}"></i><span>${k}</span><b>${(vals[i]/total*100).toFixed(0)}%</b></div>`).join("");
+}
+
 function renderMix(){
-  const d = DATA[region];
-  const keys = ["Renovation","New build","Trade","Demolition","Other"];
-  const max = Math.max(...keys.map(k => d.mix[k] || 0));
-  document.getElementById("mix").innerHTML = keys.map(k => {
-    const v = d.mix[k] || 0;
-    const w = max ? (v / max * 100) : 0;
-    return `<div class="mixrow">
-      <div class="k">${k}</div>
-      <div class="bar"><i style="width:${w.toFixed(1)}%"></i></div>
-      <div class="n">${nf(v)}</div>
-    </div>`;
-  }).join("");
+  const d=DATA[region],keys=["Renovation","New build","Trade","Demolition","Other"],max=Math.max(...keys.map(k=>d.mix[k]||0))||1;
+  document.getElementById("mix").innerHTML=keys.map(k=>{const v=d.mix[k]||0;return `<div class="mixrow"><div>${k}</div><div class="bar"><i style="width:${v/max*100}%"></i></div><div class="n">${nf(v)}</div></div>`}).join("");
 }
 
-/* ---------- region bars ---------- */
-function renderRegions(){
-  const rows = ORDER.filter(r => r !== "All Toronto")
-                    .map(r => ({ r, v: DATA[r].permits }))
-                    .sort((a,b) => b.v - a.v);
-  const w = 560, rowH = 31, L = 158, R = 54;
-  const h = rows.length * rowH + 6;
-  const max = Math.max(...rows.map(d => d.v));
-  let bars = "";
-  rows.forEach((d,i) => {
-    const bw = Math.max(2, (d.v / max) * (w - L - R));
-    const cy = i * rowH + rowH/2 + 3;
-    const on = d.r === region;
-    bars += `<text x="${L-10}" y="${cy}" text-anchor="end" dominant-baseline="central" font-size="11"
-                   fill="${on ? 'var(--text)' : 'var(--muted)'}" font-weight="${on ? 600 : 400}">${d.r}</text>`
-         +  `<rect x="${L}" y="${cy-9}" width="${bw}" height="18" rx="3"
-                   fill="var(--accent)" opacity="${on ? 1 : (d.r === 'Unknown' ? .3 : .6)}"/>`
-         +  `<text x="${L+bw+8}" y="${cy}" dominant-baseline="central" font-size="10.5"
-                   font-family="var(--mono)" fill="var(--faint)">${(d.v/1000).toFixed(1)}k</text>`
-         +  `<rect class="hit pick" x="0" y="${cy-13}" width="${w}" height="26" fill="transparent"
-                   style="cursor:pointer" data-r="${d.r}" data-x="${L+bw}" data-y="${cy-12}"
-                   data-label="${d.r}" data-value="${nf(d.v)} permits"/>`;
+function barChart(target,tipId,field,formatter,unknown=true){
+  const rows=ORDER.filter(r=>r!=="All Toronto"&&(unknown||r!=="Unknown")).map(r=>({r,v:field==="cancelRate"?(DATA[r].cancelled/DATA[r].permits*100):DATA[r][field]})).sort((a,b)=>b.v-a.v);
+  const w=560,rowH=28,L=145,R=62,h=rows.length*rowH+8,max=Math.max(...rows.map(x=>x.v))||1;let bars="";
+  rows.forEach((d,i)=>{const bw=Math.max(2,d.v/max*(w-L-R)),cy=i*rowH+rowH/2+3,on=d.r===region;
+    bars+=`<text x="${L-9}" y="${cy}" text-anchor="end" dominant-baseline="central" font-size="10.5" fill="${on?'var(--text)':'var(--muted)'}" font-weight="${on?700:400}">${d.r}</text><rect x="${L}" y="${cy-7}" width="${bw}" height="14" rx="4" fill="var(--accent)" opacity="${on?1:.55}"/><text x="${L+bw+7}" y="${cy}" dominant-baseline="central" font-size="9.5" fill="var(--faint)" font-family="var(--mono)">${formatter(d.v)}</text><rect class="hit pick" x="0" y="${cy-12}" width="${w}" height="24" fill="transparent" data-r="${d.r}" data-x="${L+bw}" data-y="${cy-9}" data-label="${d.r}" data-value="${formatter(d.v)}"/>`;
   });
-  document.getElementById("regionChart").innerHTML =
-    `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Permit counts by region">${bars}</svg>`;
-
-  wireTips("regionChart", "tip2");
-  document.querySelectorAll("#regionChart .pick").forEach(el =>
-    el.addEventListener("click", () => { region = el.dataset.r; render(); }));
+  document.getElementById(target).innerHTML=`<svg viewBox="0 0 ${w} ${h}">${bars}</svg>`;wireTips(target,tipId);
+  document.querySelectorAll(`#${target} .pick`).forEach(el=>el.onclick=()=>{region=el.dataset.r;render()});
 }
 
-/* ---------- shared hover tooltip ---------- */
-function wireTips(chartId, tipId){
-  const box = document.getElementById(chartId);
-  const tip = document.getElementById(tipId);
-  const svg = box.querySelector("svg");
-  box.querySelectorAll(".hit").forEach(el => {
-    el.addEventListener("mouseenter", () => {
-      const rect = svg.getBoundingClientRect();
-      const vb = svg.viewBox.baseVal;
-      const sx = rect.width / vb.width, sy = rect.height / vb.height;
-      tip.textContent = el.dataset.label + " · " + el.dataset.value;
-      tip.style.left = (Number(el.dataset.x) * sx) + "px";
-      tip.style.top  = (Number(el.dataset.y) * sy) + "px";
-      tip.style.opacity = 1;
-    });
-    el.addEventListener("mouseleave", () => { tip.style.opacity = 0; });
-  });
+function renderMap(){
+  const zones=[
+    ["Northwest Toronto","M 40 42 L 145 28 L 175 115 L 65 130 Z",93,78],
+    ["North York","M 150 28 L 310 30 L 320 145 L 175 115 Z",240,82],
+    ["Scarborough","M 310 30 L 475 70 L 450 210 L 320 145 Z",390,108],
+    ["Etobicoke","M 65 130 L 175 115 L 180 260 L 70 310 L 30 225 Z",112,205],
+    ["York","M 175 115 L 240 120 L 245 205 L 180 220 Z",210,165],
+    ["Midtown Toronto","M 240 120 L 320 145 L 305 220 L 245 205 Z",278,170],
+    ["East York","M 305 220 L 320 145 L 385 185 L 370 245 Z",342,207],
+    ["West Toronto","M 180 220 L 245 205 L 260 315 L 155 330 Z",210,272],
+    ["Downtown Toronto","M 245 205 L 305 220 L 320 310 L 260 315 Z",282,267],
+    ["East Toronto","M 305 220 L 370 245 L 420 305 L 320 310 Z",355,275]
+  ];
+  const vals=zones.map(z=>DATA[z[0]]?.permits||0),max=Math.max(...vals)||1;
+  const opacity=v=>.32+.68*(v/max);
+  document.getElementById("map").innerHTML=`<svg viewBox="0 0 500 355" aria-label="Approximate Toronto region map">${zones.map((z,i)=>`<path class="zone ${region===z[0]?'active':''}" data-r="${z[0]}" d="${z[1]}" fill="var(--accent)" opacity="${opacity(vals[i])}"/><text class="maplabel" x="${z[2]}" y="${z[3]}">${z[0].replace(" Toronto","")}</text>`).join("")}<path d="M150 338 Q280 352 430 320" fill="none" stroke="var(--accent2)" stroke-width="3" opacity=".35"/><text x="390" y="342" font-size="10" fill="var(--faint)">Lake Ontario</text></svg>`;
+  document.querySelectorAll(".zone").forEach(z=>z.onclick=()=>{region=z.dataset.r;render()});
+  const shown=region==="All Toronto"||region==="Unknown"?"All Toronto":region,d=DATA[shown];
+  document.getElementById("mapName").textContent=shown;
+  document.getElementById("mapPermits").textContent=nf(d.permits);
+  document.getElementById("mapHomes").textContent=nf(d.homes);
+  document.getElementById("mapMedian").textContent=d.median+" days";
 }
 
-/* ---------- metric toggle ---------- */
-document.getElementById("mMed").addEventListener("click", () => { metric = "median"; render(); });
-document.getElementById("mVol").addEventListener("click", () => { metric = "volume"; render(); });
-
-/* ---------- render all ---------- */
 function render(){
-  document.querySelectorAll(".rchip").forEach(b =>
-    b.setAttribute("aria-pressed", b.dataset.r === region));
-  document.getElementById("mMed").setAttribute("aria-pressed", metric === "median");
-  document.getElementById("mVol").setAttribute("aria-pressed", metric === "volume");
-  document.getElementById("scope").textContent =
-    "SHOWING: " + region.toUpperCase() + " · " + nf(DATA[region].permits) + " PERMITS";
-  renderKpis(); renderTrend(); renderMix(); renderRegions();
+  document.querySelectorAll(".rchip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.r===region));
+  document.getElementById("mMed").setAttribute("aria-pressed",metric==="median");
+  document.getElementById("mVol").setAttribute("aria-pressed",metric==="volume");
+  document.getElementById("scope").textContent=`SHOWING ${region.toUpperCase()} · ${nf(DATA[region].permits)} PERMITS`;
+  renderKpis();renderTrend();renderDonut();renderMix();renderMap();
+  barChart("regionChart","tip2","permits",nf,true);
+  barChart("homesChart","tip3","homes",nf,false);
+  barChart("cancelChart","tip4","cancelRate",v=>v.toFixed(1)+"%",true);
+}
+document.getElementById("mMed").onclick=()=>{metric="median";render()};
+document.getElementById("mVol").onclick=()=>{metric="volume";render()};
+
+const answer=document.getElementById("answer"),input=document.getElementById("q"),askBtn=document.getElementById("askBtn");
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{input.value=c.dataset.q;ask()});askBtn.onclick=ask;input.onkeydown=e=>{if(e.key==="Enter")ask()};
+answer.innerHTML=`<span class="badge">Live AI query</span><div class="big">Ask anything about the permit data</div><div class="meta">The model generates SQL, the query is validated, then executed against the Gold layer.</div>`;
+async function ask(){
+  const q=input.value.trim();if(!q)return;askBtn.disabled=true;answer.innerHTML=`<div style="color:var(--muted)">Querying the data...</div>`;const t0=performance.now();
+  try{const res=await fetch(API_URL+"/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q})});const data=await res.json();if(!res.ok)throw new Error(data.detail||"Request failed: "+res.status);
+    if(data.error){answer.innerHTML=`<span class="badge">Could not answer</span><div class="big">${esc(data.error)}</div>`;return}
+    answer.innerHTML=`<div class="big">${esc(String(data.answer))}</div><div style="color:var(--muted);font-size:.84rem">${esc(q)}</div><div class="cap">Generated SQL</div><pre>${esc(data.sql||"")}</pre><div class="meta">${data.rows??0} rows · ${Math.round(performance.now()-t0)} ms</div>`;
+  }catch(err){answer.innerHTML=`<span class="badge">Something went wrong</span><div class="big" style="font-size:1rem">${esc(err.message)}</div><div class="meta">The free backend can take longer on the first request after being idle.</div>`}finally{askBtn.disabled=false}
 }
 render();
-
-/* ---------- ask panel ---------- */
-const answer = document.getElementById("answer");
-const input  = document.getElementById("q");
-
-document.querySelectorAll(".chip").forEach(c =>
-  c.addEventListener("click", () => { input.value = c.dataset.q; ask(); }));
-document.getElementById("askBtn").addEventListener("click", ask);
-input.addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
-
-const EXAMPLE_SQL =
-`SELECT count(*) AS permits
-FROM permits.gold.fact_permits f
-JOIN permits.gold.dim_postal_area d
-  ON f.postal_area = d.postal_area
-WHERE d.region = 'Scarborough'
-  AND f.application_year = 2025;`;
-
-function showExample(){
-  answer.innerHTML =
-    `<span class="badge">Example</span>
-     <div class="big">3,162 permits</div>
-     <div style="color:var(--muted); font-size:.88rem">Scarborough, applied for in 2025.</div>
-     <div class="cap">Generated SQL</div><pre id="sqlOut"></pre>
-     <div class="meta">A worked example of how answers will appear. The box connects to the model once the backend is deployed.</div>`;
-  typeOut(document.getElementById("sqlOut"), EXAMPLE_SQL);
-}
-
-function typeOut(el, text){
-  let i = 0;
-  (function tick(){
-    el.textContent = text.slice(0, i);
-    if (i < text.length){ i += 2; setTimeout(tick, 12); }
-  })();
-}
-showExample();
-
-async function ask(){
-  const q = input.value.trim();
-  if (!q) return;
-
-  if (!API_URL){
-    answer.innerHTML =
-      `<span class="badge">Not connected yet</span>
-       <div style="margin-top:11px">The question box is built and waiting on its backend.<span class="cursor"></span></div>
-       <div class="meta">Questions go to an open source model, which returns SQL. The query is validated before it runs,
-       executed against a read only connection, and shown here next to the answer.</div>`;
-    return;
-  }
-
-  answer.innerHTML = `<div style="color:var(--muted)">Thinking<span class="cursor"></span></div>`;
-  const t0 = performance.now();
-
-  try{
-    const res = await fetch(API_URL + "/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: q })
-    });
-    if (!res.ok) throw new Error("Request failed: " + res.status);
-    const data = await res.json();
-    const ms = Math.round(performance.now() - t0);
-
-    if (data.error){
-      answer.innerHTML = `<span class="badge">Could not answer</span>
-        <div style="margin-top:11px">${esc(data.error)}</div>`;
-      return;
-    }
-    answer.innerHTML =
-      `<div class="big">${esc(String(data.answer))}</div>
-       <div style="color:var(--muted); font-size:.88rem">${esc(q)}</div>
-       <div class="cap">Generated SQL</div><pre id="sqlOut"></pre>
-       <div class="meta">${data.rows ?? 0} rows · ${ms} ms</div>`;
-    typeOut(document.getElementById("sqlOut"), data.sql || "");
-  }catch(err){
-    answer.innerHTML = `<span class="badge">Something went wrong</span>
-      <div style="margin-top:11px">${esc(err.message)}</div>
-      <div class="meta">The backend sleeps when idle, so the first request after a while can take up to 30 seconds.</div>`;
-  }
-}
-
-function esc(s){
-  return String(s).replace(/[&<>"']/g, c =>
-    ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-}
 </script>
 </body>
 </html>
