@@ -15,16 +15,18 @@ Median days from application to permit issued, for permits applied for between 2
 | Year | Permits issued | Median days | Average days |
 |---|---|---|---|
 | 2020 | 19,428 | 28 | 68.0 |
-| 2021 | 22,182 | 30 | 89.3 |
-| 2022 | 21,188 | **34** | 74.2 |
+| 2021 | 22,180 | 30 | 89.3 |
+| 2022 | 21,184 | **34** | 74.2 |
 | 2023 | 18,321 | 29 | 66.5 |
-| 2024 | 19,008 | 23 | 52.6 |
+| 2024 | 19,007 | 23 | 52.6 |
 
 Approval times rose through 2022 and then improved, with 2024 the fastest year in the window.
 
 The gap between median and average is itself informative: a small number of permits take years, which pulls the average up by 30 to 60 days. Median is used throughout for that reason.
 
 **2025 and 2026 are deliberately excluded.** Permits from those years that are still undecided have no issue date, so only the fast ones have been resolved and any average for those years looks artificially good. The cutoff is derived from the current date rather than hardcoded, so it advances on its own.
+
+Counts in this table are **permits that were issued**, which is why they are lower than total permits applied for in the same year. The dashboard shows applications, so the two figures differ by design.
 
 ---
 
