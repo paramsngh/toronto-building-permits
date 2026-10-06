@@ -8,22 +8,9 @@ The analytical question: **how long does the City of Toronto take to issue a bui
 
 ---
 
-## What this project solves
-
-Toronto needs more housing, and every new home starts with a building permit. The City shares all its permit data online, but the raw files are messy. The same permit number is reused across different permit types, one project can show up as many as four times because plumbing, drain and HVAC permits are filed alongside the main permit, and costs are stored as text. If you just count the rows, you get far more permits than really exist.
-
-This project cleans that data and answers three simple questions:
-
-1. **How long does it take to get a permit?** By year and by area of the city.
-2. **Where are new homes being built?** Counting homes, not just permits.
-3. **What kind of work is happening?** Renovations, new buildings, trade work or demolitions.
-
-You can explore the answers on the live dashboard, or type a question in plain English and get an answer back, with no SQL needed.
-
----
-
-
 ## Architecture
+
+**Tech stack:** Azure Data Lake Storage Gen2, Azure Databricks (Delta Lake, Unity Catalog, serverless SQL warehouse), Python, PySpark, SQL, FastAPI, Groq (open source LLM for natural language to SQL), Render, and Power BI (in progress).
 
 ```
 City of Toronto Open Data (CSV)
@@ -43,44 +30,13 @@ City of Toronto Open Data (CSV)
      ┌──────┴───────────────┐
      ▼                      ▼
   Web dashboard        Ask the data API
-  (Render)             (Groq + Databricks SQL)
+  (Render)             (Groq(AI) + Databricks SQL)
                             │
                             ▼
                      Power BI (next)
 ```
 
 Authentication from Databricks to storage uses a Unity Catalog storage credential backed by an Azure managed identity. No access keys exist anywhere in this repository.
-
----
-
-## Ask the data: AI question answering
-
-The dashboard includes a box where anyone can type a question in plain English, such as "How many permits were issued in Scarborough in 2025?"
-
-1. **Groq writes the SQL.** An open source model running on Groq reads the question along with the gold table and column descriptions, and writes a Databricks SQL query.
-2. **The query is checked.** The SQL is validated before it runs.
-3. **Databricks runs it.** The query runs against the gold layer and the answer comes back with the exact SQL shown, so every answer can be verified.
-
-The column descriptions stored in Unity Catalog are what the model reads in order to write correct SQL, which is why documenting every gold column matters.
-
----
-
-## Data model
-
-Gold is a star schema. A dimension was only created where it adds information the fact table does not already have, which is why structure type and work type remain plain columns rather than becoming tables of their own.
-
-| Table | Rows | Contents |
-|---|---|---|
-| `fact_permits` | 152,937 | One row per permit revision, applied for 2020 onward |
-| `dim_date` | 2,557 | One row per day, with year, quarter, month and weekday |
-| `dim_status` | 30 | Each status mapped to a broader stage |
-| `dim_permit_type` | 16 | Each type marked as a main or secondary permit |
-| `dim_postal_area` | 98 | Each postal area mapped to a region |
-| `approval_trend` | 5 | Median and average days to issue, by year |
-| `ui_summary` | 96 | Region and year totals that power the web dashboard |
-| `dq_results` | grows | Quality metrics appended on every run |
-
-Relationships are many to one from the fact table to each dimension. `dim_date` connects three times, to application, issued and completed dates, so the same calendar can answer "applied for in March" and "issued in March" as separate questions.
 
 ---
 
@@ -149,6 +105,64 @@ The headline finding table counts permits that were **issued**. The dashboard co
 
 ---
 
+## What this project solves
+
+Toronto needs more housing, and every new home starts with a building permit. The City shares all its permit data online, but the raw files are messy. The same permit number is reused across different permit types, one project can show up as many as four times because plumbing, drain and HVAC permits are filed alongside the main permit, and costs are stored as text. If you just count the rows, you get far more permits than really exist.
+
+This project cleans that data and answers three simple questions:
+
+1. **How long does it take to get a permit?** By year and by area of the city.
+2. **Where are new homes being built?** Counting homes, not just permits.
+3. **What kind of work is happening?** Renovations, new buildings, trade work or demolitions.
+
+You can explore the answers on the live dashboard, or type a question in plain English and get an answer back, with no SQL needed.
+
+---
+
+## Ask the data: AI question answering
+
+The dashboard includes a box where anyone can type a question in plain English, such as "How many permits were issued in Scarborough in 2025?"
+
+1. **Groq writes the SQL.** An open source model running on Groq reads the question along with the gold table and column descriptions, and writes a Databricks SQL query.
+2. **The query is checked.** The SQL is validated before it runs.
+3. **Databricks runs it.** The query runs against the gold layer and the answer comes back with the exact SQL shown, so every answer can be verified.
+
+The column descriptions stored in Unity Catalog are what the model reads in order to write correct SQL, which is why documenting every gold column matters.
+
+### How the AI layer is protected
+
+Anyone on the internet can type into the question box, so the backend assumes every generated query could be wrong or hostile.
+
+| Protection | What it does |
+|---|---|
+| Deny by default SQL validation | The SQL is parsed, not keyword searched. Only one read only SELECT is allowed |
+| Table allowlist | Only the gold tables can be read. Bronze, silver and system tables are refused |
+| Blocked functions | File readers and paid AI functions such as `read_files` and `ai_summarize` are refused |
+| Row cap | Every query is limited to 200 rows |
+| Query timeout | Any query running longer than 90 seconds is stopped |
+| Rate limits | Each visitor can ask 5 questions a day, and the whole site 150 a day |
+| Tested answers | A set of questions with known answers from the dashboard is rerun after every prompt change |
+
+---
+
+## Data model
+
+Gold is a star schema. A dimension was only created where it adds information the fact table does not already have, which is why structure type and work type remain plain columns rather than becoming tables of their own.
+
+| Table | Rows | Contents |
+|---|---|---|
+| `fact_permits` | 152,937 | One row per permit revision, applied for 2020 onward |
+| `dim_date` | 2,557 | One row per day, with year, quarter, month and weekday |
+| `dim_status` | 30 | Each status mapped to a broader stage |
+| `dim_permit_type` | 16 | Each type marked as a main or secondary permit |
+| `dim_postal_area` | 98 | Each postal area mapped to a region |
+| `approval_trend` | 5 | Median and average days to issue, by year |
+| `ui_summary` | 96 | Region and year totals that power the web dashboard |
+| `dq_results` | grows | Quality metrics appended on every run |
+
+Relationships are many to one from the fact table to each dimension. `dim_date` connects three times, to application, issued and completed dates, so the same calendar can answer "applied for in March" and "issued in March" as separate questions.
+
+---
 
 ## Data quality findings
 
@@ -225,7 +239,7 @@ The data contains both `Application On Hold` and `Application on Hold`. Spark tr
 
 **Permit lifecycle is traceable.** Of the 1,741 permits that left the active file during the comparison week, 1,716 appeared in the cleared file. Permits can be followed from application through to completion.
 
-**Built to run for close to $0.** Every choice, from serverless compute to keeping storage and processing lean, was made with cost in mind.
+**Built to run cheaply.** The project runs on Azure for Students credits. Compute is serverless and only costs money while it is running: the SQL warehouse is the smallest size, capped at one cluster, and stops after 5 minutes idle. Storage costs effectively nothing. A monthly budget with alerts gives early warning if spending rises.
 
 ---
 
@@ -236,6 +250,7 @@ bronze_layer_nb.ipynb    Load raw CSVs into Delta, no transformation
 silver_layer_nb.ipynb    Clean, key, deduplicate, flag, merge
 gold_layer_nb.ipynb      Filter, rename, document, build star schema
 index.html               Live web dashboard
+backend/                 FastAPI service: Groq writes SQL, it is validated, then runs on Databricks
 ```
 
 ---
@@ -250,7 +265,8 @@ index.html               Live web dashboard
 - Quality checks written to a tracked table
 - Star schema with documented columns
 - Live web dashboard on Render
-- AI question answering with Groq, with SQL validation, running against the gold layer
+- AI question answering with Groq, running against the gold layer
+- SQL validation, rate limits, query timeouts and cost alerts protecting the public AI layer
 
 **Next steps**
 
