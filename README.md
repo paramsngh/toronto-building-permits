@@ -2,9 +2,23 @@
 
 **[Live dashboard →](https://toronto-building-permits-1.onrender.com/)**
 
-An end to end data pipeline on City of Toronto building permit data, built with Azure Data Lake Storage, Azure Databricks and Power BI.
+An end to end data pipeline on City of Toronto building permit data, built with Azure Data Lake Storage and Azure Databricks, with a live web dashboard and an AI layer that answers questions in plain English.
 
 The analytical question: **how long does the City of Toronto take to issue a building permit, and is it getting faster or slower?** Approval speed is regularly cited in the debate about housing supply in Toronto, and this data can measure it directly.
+
+---
+
+## What this project solves
+
+Toronto needs more housing, and every new home starts with a building permit. The City shares all its permit data online, but the raw files are messy. The same permit number is reused across different permit types, one project can show up as many as four times because plumbing, drain and HVAC permits are filed alongside the main permit, and costs are stored as text. If you just count the rows, you get far more permits than really exist.
+
+This project cleans that data and answers three simple questions:
+
+1. **How long does it take to get a permit?** By year and by area of the city.
+2. **Where are new homes being built?** Counting homes, not just permits.
+3. **What kind of work is happening?** Renovations, new buildings, trade work or demolitions.
+
+You can explore the answers on the live dashboard, or type a question in plain English and get an answer back, with no SQL needed.
 
 ---
 
@@ -26,7 +40,50 @@ The gap between median and average is itself informative: a small number of perm
 
 **2025 and 2026 are deliberately excluded.** Permits from those years that are still undecided have no issue date, so only the fast ones have been resolved and any average for those years looks artificially good. The cutoff is derived from the current date rather than hardcoded, so it advances on its own.
 
-Counts in this table are **permits that were issued**, which is why they are lower than total permits applied for in the same year. The dashboard shows applications, so the two figures differ by design.
+---
+
+## Key findings
+
+Numbers cover permits applied for from January 2020 to 14 September 2026. Approval times only use 2020 to 2024, for the reason above.
+
+### Toronto at a glance
+
+| Measure | Value |
+|---|---|
+| Permits since 2020 | 152,937 |
+| Homes created | 143,601 |
+| Construction value | $107.6B |
+| Typical wait for a permit (2020 to 2024) | 28 days |
+| Permits cancelled | 10.0% |
+| Renovations / new buildings | 62% / 10% |
+
+### Main findings
+
+**1. Permits got slower, then faster.** The typical wait went from 28 days in 2020 up to 34 days in 2022, then dropped to 23 days in 2024, the fastest year so far.
+
+**2. Counting permits gives the wrong picture.** Downtown has only 9% of the city's permits but 20% of its new homes (28,564).
+
+**3. Downtown builds less often, but much bigger.** Only 2% of Downtown permits are for new buildings. But each one adds about 89 homes, compared to about 10 for the rest of the city. Downtown's housing comes from a few big condo towers.
+
+**4. The 2022 slowdown hit the suburbs the most.** Downtown stayed around 30 days. Northwest Toronto jumped to 59 days, Etobicoke to 49 and Scarborough to 43. All areas got faster again by 2024.
+
+**5. New homes go up and down much more than permits do.** The number of permits each year stayed about the same. But new homes dropped from 34,118 in 2021 to 14,813 in 2023, less than half.
+
+### Surprising findings
+
+**More permits does not mean more homes.** Scarborough and West Toronto have the most permits, but Downtown creates more homes than either. New buildings in Scarborough add about 6 homes each, so they are mostly houses, not towers.
+
+**West and East Toronto are mostly renovating.** About three out of four permits there are renovations. Very few are new buildings.
+
+**Permits with missing locations are often the big ones.** Permits without a usable postal code are only 6% of the total, but they make up 10% of new homes and 12% of construction value. That is why they are kept and shown as "Unknown area" instead of being removed.
+
+**The fastest areas mostly do renovations.** East York, West and East Toronto have the shortest waits (21 days), and most of their permits are renovations, which are simpler to approve.
+
+**Scarborough has the most cancelled permits.** 12.7% of its permits are cancelled, compared to about 8% in Midtown and Downtown.
+
+### Why some numbers do not match
+
+The headline finding table counts permits that were **issued**. The dashboard counts permits that were **applied for**. For example, 2020 has 19,428 issued permits but 21,481 applications.
 
 ---
 
@@ -47,12 +104,28 @@ City of Toronto Open Data (CSV)
             ▼
    Databricks  ·  gold                   star schema, renamed, documented
             │
-     ┌──────┴──────┐
-     ▼             ▼
-  Power BI     Question answering API
+     ┌──────┴───────────────┐
+     ▼                      ▼
+  Web dashboard        Ask the data API
+  (Render)             (Groq + Databricks SQL)
+                            │
+                            ▼
+                     Power BI (next)
 ```
 
 Authentication from Databricks to storage uses a Unity Catalog storage credential backed by an Azure managed identity. No access keys exist anywhere in this repository.
+
+---
+
+## Ask the data: AI question answering
+
+The dashboard includes a box where anyone can type a question in plain English, such as "How many permits were issued in Scarborough in 2025?"
+
+1. **Groq writes the SQL.** An open source model running on Groq reads the question along with the gold table and column descriptions, and writes a Databricks SQL query.
+2. **The query is checked.** The SQL is validated before it runs.
+3. **Databricks runs it.** The query runs against the gold layer and the answer comes back with the exact SQL shown, so every answer can be verified.
+
+The column descriptions stored in Unity Catalog are what the model reads in order to write correct SQL, which is why documenting every gold column matters.
 
 ---
 
@@ -68,6 +141,7 @@ Gold is a star schema. A dimension was only created where it adds information th
 | `dim_permit_type` | 16 | Each type marked as a main or secondary permit |
 | `dim_postal_area` | 98 | Each postal area mapped to a region |
 | `approval_trend` | 5 | Median and average days to issue, by year |
+| `ui_summary` | 96 | Region and year totals that power the web dashboard |
 | `dq_results` | grows | Quality metrics appended on every run |
 
 Relationships are many to one from the fact table to each dimension. `dim_date` connects three times, to application, issued and completed dates, so the same calendar can answer "applied for in March" and "issued in March" as separate questions.
@@ -77,6 +151,19 @@ Relationships are many to one from the fact table to each dimension. `dim_date` 
 ## Data quality findings
 
 The source data needed substantial work. These were the findings that changed the result rather than just tidying it.
+
+### Summary
+
+| Problem | What was done |
+|---|---|
+| About 6,850 rows had values shifted into the wrong columns | Fixed how the CSV is read in bronze |
+| Permit number plus revision had 5,065 duplicates | Added permit type as a third key part |
+| Plumbing, drain and HVAC permits often repeat a main permit | Excluded only when a main permit exists on the same project |
+| 44,131 postal codes were just spaces | Converted to missing values |
+| The same status existed with different capitalisation | Normalised, with a check that fails loudly |
+| Costs were stored as text | Converted to numbers |
+| 2025 and 2026 waits looked too fast, because slow permits are not finished yet | Left those years out of approval times |
+| Postal codes do not match neighbourhoods | Grouped postal areas into ten regions, plus "Unknown area" |
 
 ### Spark was silently corrupting 1% of rows
 
@@ -113,9 +200,9 @@ The data contains both `Application On Hold` and `Application on Hold`. Spark tr
 ### Known data limitations
 
 - **Construction values are self reported** by the applicant and not appraised. Roughly 84% of permits carry a usable figure, so any dollar total understates activity. The coverage percentage is tracked in `dq_results`.
-- **About 9,000 permits have no postal code** and cannot be placed on a map.
+- **About 9,000 permits have no usable postal code** and cannot be placed on a map. They appear as "Unknown area".
 - **38 rows have impossible date sequences**, mostly permits recorded as issued before they were applied for, which are likely backdated entries. These are flagged and their durations set to null.
-- **Region names are approximate.** The source contains no district names, so regions are derived from the first two characters of the postal code. Scarborough, North York and Etobicoke map cleanly; other regions cross old borough boundaries and are named broadly.
+- **Region names are approximate.** The source contains no district names, so each postal area (the first three characters of the postal code) is mapped to one of ten regions. Postal areas do not line up exactly with neighbourhood or old borough boundaries.
 - **No sale prices or property values.** That data is licensed and not publicly available. This is a construction and development dataset, not a housing market one.
 
 ---
@@ -132,9 +219,11 @@ The data contains both `Application On Hold` and `Application on Hold`. Spark tr
 
 **`dq_results` is appended on purpose.** Every other table is replaced on each run. A single quality measurement proves little; the same measurement over time is a monitor.
 
-**Columns are documented in code.** Every gold column carries a description in Unity Catalog, applied by the notebook because overwriting a table clears them. These descriptions are also what the question answering layer will read in order to write correct SQL.
+**Columns are documented in code.** Every gold column carries a description in Unity Catalog, applied by the notebook because overwriting a table clears them. These descriptions are also what the AI question answering layer reads in order to write correct SQL.
 
 **Permit lifecycle is traceable.** Of the 1,741 permits that left the active file during the comparison week, 1,716 appeared in the cleared file. Permits can be followed from application through to completion.
+
+**Built to run for close to $0.** Every choice, from serverless compute to keeping storage and processing lean, was made with cost in mind.
 
 ---
 
@@ -144,6 +233,7 @@ The data contains both `Application On Hold` and `Application on Hold`. Spark tr
 bronze_layer_nb.ipynb    Load raw CSVs into Delta, no transformation
 silver_layer_nb.ipynb    Clean, key, deduplicate, flag, merge
 gold_layer_nb.ipynb      Filter, rename, document, build star schema
+index.html               Live web dashboard
 ```
 
 ---
@@ -157,13 +247,13 @@ gold_layer_nb.ipynb      Filter, rename, document, build star schema
 - Idempotent merge, verified by repeated runs
 - Quality checks written to a tracked table
 - Star schema with documented columns
+- Live web dashboard on Render
+- AI question answering with Groq, with SQL validation, running against the gold layer
 
-**In progress**
+**Next steps**
 
-- Daily ingestion job against the City's CKAN API
-- Databricks Workflow to orchestrate the four notebooks on a schedule
 - Power BI report: approval speed, what and where, data quality
-- Natural language question answering over the gold layer, with SQL validation and query logging
+- Live data from the City of Toronto's CKAN API, with a scheduled Databricks Workflow so the dashboard updates automatically
 
 The data is currently a snapshot taken on 14 September 2026. The pipeline is written for incremental loading and the silver merge is already idempotent, so scheduling it requires no change to the transformation logic.
 
