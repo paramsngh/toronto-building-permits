@@ -37,6 +37,12 @@ app = FastAPI(title="Toronto Permits API")
 # read from the X-Forwarded-For header; otherwise every visitor would look the
 # same and share one limit.
 def visitor_ip(request: Request) -> str:
+    # Prefer the headers set by the edge network in front of Render, which hold
+    # the one real client address, then fall back to X-Forwarded-For.
+    for header in ("cf-connecting-ip", "true-client-ip"):
+        value = request.headers.get(header)
+        if value:
+            return value.strip()
     fwd = request.headers.get("x-forwarded-for")
     return fwd.split(",")[0].strip() if fwd else request.client.host
 
@@ -158,6 +164,18 @@ def log_query(question, sql, provider, ms, ok, note):
         )
     except Exception as e:
         log.warning("could not write query log: %s", e)
+
+
+@app.get("/whoami")
+def whoami(request: Request):
+    """Temporary: shows which address the rate limit sees. Remove after testing."""
+    return {
+        "limit_key": visitor_ip(request),
+        "cf_connecting_ip": request.headers.get("cf-connecting-ip"),
+        "true_client_ip": request.headers.get("true-client-ip"),
+        "x_forwarded_for": request.headers.get("x-forwarded-for"),
+        "worker_pid": os.getpid(),
+    }
 
 
 @app.get("/health")
