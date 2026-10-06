@@ -45,17 +45,28 @@ def whole_site(request: Request) -> str:
     return "whole-site"
 
 
-limiter = Limiter(key_func=visitor_ip)
+# Each visitor may ask this many questions per day, and the whole site this many.
+VISITOR_DAILY = 5
+SITE_DAILY = 150
+
+
+# moving-window counts the last 60 seconds from now, instead of resetting on
+# the clock minute, so limits cannot be dodged by waiting a few seconds.
+limiter = Limiter(key_func=visitor_ip, strategy="moving-window")
 app.state.limiter = limiter
 
 
 @app.exception_handler(RateLimitExceeded)
 def too_many(request: Request, exc: RateLimitExceeded):
     # "detail" is the field the dashboard shows, so the visitor sees a clear message.
-    if "day" in str(exc.detail):
-        msg = "The daily question limit has been reached. Please try again tomorrow."
+    detail = str(exc.detail)
+    if request.url.path == "/ask" and detail.startswith(f"{VISITOR_DAILY} per"):
+        msg = (f"You have used your {VISITOR_DAILY} questions for today. "
+               "Please come back tomorrow.")
+    elif request.url.path == "/ask" and detail.startswith(f"{SITE_DAILY} per"):
+        msg = "The site has reached its question limit for today. Please try again tomorrow."
     else:
-        msg = "Too many questions in a short time. Please wait a minute and try again."
+        msg = "Too many requests. Please try again later."
     return JSONResponse(status_code=429, content={"detail": msg})
 
 
@@ -164,8 +175,8 @@ def data(request: Request):
 
 
 @app.post("/ask")
-@limiter.limit("5/minute;30/day")
-@limiter.limit("150/day", key_func=whole_site)
+@limiter.limit(f"{VISITOR_DAILY}/day")
+@limiter.limit(f"{SITE_DAILY}/day", key_func=whole_site)
 def ask(request: Request, body: Question):
     question = body.question.strip()
     if not question:
