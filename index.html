@@ -150,9 +150,10 @@ section.block{padding:56px 0 0}
 
 /* Ask */
 .ask{background:var(--panel);border:1px solid var(--line2);border-radius:28px;padding:clamp(22px,4vw,40px)}
-.askGrid{display:grid;grid-template-columns:.9fr 1.1fr;gap:28px;align-items:start}
+.askGrid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:28px;align-items:start}
+.askGrid>div{min-width:0}
 .ask h2{font-family:var(--display);font-weight:500;font-size:clamp(1.8rem,3.2vw,2.5rem);letter-spacing:-.03em;line-height:1.05;margin:0 0 12px;font-weight:500}
-.ask p{color:var(--muted);margin:0 0 16px;max-width:30em}
+.askIntro{color:var(--muted);margin:0 0 16px;max-width:30em}
 .how{display:grid;gap:10px;margin:22px 0 0;padding:0;list-style:none;counter-reset:s}
 .how li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;font-size:.9rem;color:#cfcac4;counter-increment:s}
 .how li:before{content:counter(s);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid var(--line2);font-size:.76rem;color:var(--muted)}
@@ -167,12 +168,12 @@ section.block{padding:56px 0 0}
 .chip:hover{color:var(--text);border-color:var(--blue)}
 .answer{margin-top:18px;min-height:150px;border-radius:18px;background:rgba(12,12,16,.55);border:1px solid var(--line);padding:18px}
 .answer .q{color:var(--muted);font-size:.86rem;margin:0 0 6px}
-.answer .a{font-family:var(--display);font-weight:500;font-size:clamp(1.15rem,2.2vw,1.5rem);line-height:1.25;margin:0;letter-spacing:-.01em}
+.answer .a{color:var(--text);font-family:var(--display);font-weight:500;font-size:clamp(1.15rem,2.2vw,1.5rem);line-height:1.25;margin:0;letter-spacing:-.01em}
 .answer .state{color:var(--muted);font-size:.92rem;margin:0}
 .answer .err{color:#f2a08a}
 .answer details{margin-top:14px}
 .answer summary{cursor:pointer;color:var(--muted);font-size:.84rem}
-.answer pre{margin:10px 0 0;padding:14px;background:var(--night);border:1px solid var(--line);border-radius:12px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8rem;line-height:1.55;color:#e6dccf}
+.answer pre{margin:10px 0 0;padding:14px;background:var(--night);border:1px solid var(--line);border-radius:12px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8rem;line-height:1.6;color:#e6dccf;white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
 .answer .meta{color:var(--faint);font-size:.78rem;margin-top:10px}
 .pulse{display:inline-flex;gap:5px;vertical-align:middle;margin-right:8px}
 .pulse i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:bl 1s infinite ease-in-out}
@@ -325,7 +326,7 @@ footer code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;fon
       <div class="askGrid">
         <div>
           <h2>Ask the data anything.</h2>
-          <p>Type a question in plain English. An AI model running on Groq writes the SQL, the query is checked, then it runs against the cleaned permit tables in Databricks.</p>
+          <p class="askIntro">Type a question in plain English. An AI model running on Groq writes the SQL, the query is checked, then it runs against the cleaned permit tables in Databricks.</p>
           <ol class="how">
             <li>Your question is turned into a SQL query</li>
             <li>The query is checked before anything runs</li>
@@ -605,6 +606,12 @@ let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTime
 document.addEventListener("pointerdown", e => { if (!e.target.closest(".hit")) hideTip(); });
 
 /* Ask the data */
+function prettySql(s){
+  return String(s || "").replace(/\s+/g, " ").trim()
+    .replace(/\s+(FROM|LEFT JOIN|RIGHT JOIN|INNER JOIN|JOIN|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|UNION ALL|UNION)\b/gi, "\n$1")
+    .replace(/\s+(AND|OR)\s+/gi, "\n  $1 ")
+    .replace(/\s+(ON)\s+/gi, "\n  $1 ");
+}
 const answer = document.getElementById("answer"), input = document.getElementById("q"), askBtn = document.getElementById("askBtn");
 const idle = () => answer.innerHTML = `<p class="state">Answers appear here, along with the exact SQL that produced them. The first question after a quiet spell can take up to a minute while the server wakes up.</p>`;
 idle();
@@ -622,12 +629,12 @@ async function ask(){
     let data = {}; try { data = await res.json(); } catch (_) {}
     if (!res.ok) throw new Error(data.detail || `The server responded with status ${res.status}.`);
     if (data.error) {
-      answer.innerHTML = `<p class="q">${esc(q)}</p><p class="a err">${esc(data.error)}</p>${data.sql ? `<details><summary>Show the SQL that was tried</summary><pre>${esc(data.sql)}</pre></details>` : ""}<p class="meta">Try naming a region, a year or a permit type.</p>`;
+      answer.innerHTML = `<p class="q">${esc(q)}</p><p class="a err">${esc(data.error)}</p>${data.sql ? `<details><summary>Show the SQL that was tried</summary><pre>${esc(prettySql(data.sql))}</pre></details>` : ""}<p class="meta">Try naming a region, a year or a permit type.</p>`;
       return;
     }
     const ms = Math.round(performance.now() - t0);
     answer.innerHTML = `<p class="q">${esc(q)}</p><p class="a">${esc(data.answer ?? "")}</p>
-      <details open><summary>Generated SQL</summary><pre>${esc(data.sql || "")}</pre></details>
+      <details open><summary>Generated SQL</summary><pre>${esc(prettySql(data.sql))}</pre></details>
       <p class="meta num">${nf(data.rows ?? 0)} ${data.rows === 1 ? "row" : "rows"} returned in ${(ms / 1000).toFixed(1)} s</p>`;
   } catch (err) {
     const msg = err.name === "AbortError" ? "The request took longer than 90 seconds and was stopped." : err.message || "The request could not be completed.";
