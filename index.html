@@ -57,9 +57,9 @@ button{cursor:pointer}
 .heroFoot{margin-top:auto;padding-bottom:4px;padding-top:12px}
 
 /* Skyline selector */
-.skyHead{text-shadow:0 1px 12px rgba(12,12,16,.9);display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:6px}
+.skyHead{text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 14px rgba(12,12,16,.95);display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:6px}
 .skyHead h2{font-family:var(--display);font-size:.95rem;font-weight:500;letter-spacing:-.01em;margin:0}
-.skyHead p{margin:2px 0 0;color:var(--faint);font-size:.84rem}
+.skyHead p{margin:2px 0 0;color:#e4dfd9;font-size:.86rem;font-weight:500;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 12px rgba(12,12,16,.95),0 0 24px rgba(12,12,16,.8)}
 .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .seg{display:inline-flex;background:rgba(10,15,30,.66);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line2);border-radius:999px;padding:3px}
 .seg button{border:0;background:transparent;color:var(--muted);padding:6px 13px;border-radius:999px;font-size:.84rem;font-weight:500;white-space:nowrap}
@@ -233,7 +233,7 @@ footer code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;fon
 
     <div class="heroCopy">
       <h1><span>Where Toronto is building,</span> <span>and how fast.</span></h1>
-      <p class="lede">Every building permit the City of Toronto has received since 2020: how long approvals take, how many homes they create, and which parts of the city are growing.</p>
+      <p class="lede">Every building permit in Toronto since 2020. See how long approvals take, how many new homes are being built, and which parts of the city are growing.</p>
     </div>
 
     <div class="heroFoot">
@@ -548,10 +548,12 @@ function renderMix(){
   document.getElementById("mixList").innerHTML = MIX.map(k => `<li><span class="dot" style="background:${k[2]}"></span><span>${k[1]}</span><span class="n num">${nf(d[k[0]])}</span><span class="p num">${pct((d[k[0]] || 0) / total * 100, 0)}</span></li>`).join("");
   const nb = d.new_build / total * 100, rv = d.renovation / total * 100, perBuild = d.new_build ? d.homes / d.new_build : 0;
   const cityPer = T(CITY).homes / T(CITY).new_build;
-  let text = `<strong>${pct(nb, 0)} of permits are new builds</strong> and ${pct(rv, 0)} are renovations. `;
-  if (perBuild > cityPer * 1.6) text += `New builds here are large: about <strong>${Math.round(perBuild)} homes for every new build permit</strong>, against ${Math.round(cityPer)} citywide. Few permits, big towers.`;
-  else if (perBuild < cityPer * 0.7) text += `That works out to about ${Math.round(perBuild)} homes for every new build permit, smaller projects than the city average of ${Math.round(cityPer)}.`;
-  else text += `That works out to about ${Math.round(perBuild)} homes for every new build permit, close to the city average of ${Math.round(cityPer)}.`;
+  const nbP = pct(nb, 0), rvP = pct(rv, 0), per = Math.round(perBuild), cp = Math.round(cityPer);
+  let text;
+  if (r === CITY) text = `<strong>About 1 in 10 permits is for a new building.</strong> Most permits (${rvP}) are for renovations. On average, each new building adds about ${per} homes.`;
+  else if (perBuild > cityPer * 1.6) text = `<strong>Only ${nbP} of permits here are for new buildings</strong>, but each one adds about ${per} homes. The city average is ${cp}. Fewer projects, but much bigger ones.`;
+  else if (perBuild < cityPer * 0.7) text = `<strong>${nbP} of permits here are for new buildings.</strong> Renovations make up ${rvP}. Each new building adds about ${per} homes, fewer than the city average of ${cp}.`;
+  else text = `<strong>${nbP} of permits here are for new buildings.</strong> Renovations make up ${rvP}. Each new building adds about ${per} homes, about the same as the city average of ${cp}.`;
   document.getElementById("insight").innerHTML = text;
 }
 
