@@ -345,6 +345,7 @@ footer code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;fon
             <button class="chip" data-q="Which region has the shortest median approval time?">Fastest approvals</button>
             <button class="chip" data-q="How many permits were cancelled last year?">Cancellations last year</button>
           </div>
+          <p class="fine" style="margin:10px 0 0">Each visitor can ask 5 questions a day, to keep this free demo running.</p>
           <div class="answer" id="answer" aria-live="polite"></div>
         </div>
       </div>
@@ -625,10 +626,14 @@ async function ask(){
   const q = input.value.trim(); if (!q) { input.focus(); return; }
   askBtn.disabled = true; askBtn.textContent = "Asking";
   answer.innerHTML = `<p class="q">${esc(q)}</p><p class="state"><span class="pulse"><i></i><i></i><i></i></span>Writing and running the query</p>`;
-  const t0 = performance.now(), ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 90000);
+  const t0 = performance.now(), ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 150000);
   try {
     const res = await fetch(API_URL + "/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }), signal: ctrl.signal });
     let data = {}; try { data = await res.json(); } catch (_) {}
+    if (res.status === 429) {
+      answer.innerHTML = `<p class="q">${esc(q)}</p><p class="a err">${esc(data.detail || "Too many questions in a short time. Please wait a minute and try again.")}</p><p class="meta">Daily limits keep this free demo running for everyone.</p>`;
+      return;
+    }
     if (!res.ok) throw new Error(data.detail || `The server responded with status ${res.status}.`);
     if (data.error) {
       answer.innerHTML = `<p class="q">${esc(q)}</p><p class="a err">${esc(data.error)}</p>${data.sql ? `<details><summary>Show the SQL that was tried</summary><pre>${esc(prettySql(data.sql))}</pre></details>` : ""}<p class="meta">Try naming a region, a year or a permit type.</p>`;
@@ -639,7 +644,7 @@ async function ask(){
       <details open><summary>Generated SQL</summary><pre>${esc(prettySql(data.sql))}</pre></details>
       <p class="meta num">${nf(data.rows ?? 0)} ${data.rows === 1 ? "row" : "rows"} returned in ${(ms / 1000).toFixed(1)} s</p>`;
   } catch (err) {
-    const msg = err.name === "AbortError" ? "The request took longer than 90 seconds and was stopped." : err.message || "The request could not be completed.";
+    const msg = err.name === "AbortError" ? "The request took longer than 2 and a half minutes and was stopped." : err.message || "The request could not be completed.";
     answer.innerHTML = `<p class="q">${esc(q)}</p><p class="a err">${esc(msg)}</p><p class="meta">The free server sleeps when idle. Wait a few seconds and ask again.</p>`;
   } finally {
     clearTimeout(timer); askBtn.disabled = false; askBtn.textContent = "Ask";
