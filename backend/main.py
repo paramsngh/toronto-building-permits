@@ -12,11 +12,14 @@ import datetime
 import decimal
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from databricks import sql as dbsql
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
 
 from prompt import build_prompt
 from llm import generate_sql
@@ -27,6 +30,34 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("permits")
 
 app = FastAPI(title="Toronto Permits API")
+
+
+# Rate limits. Every question wakes the SQL warehouse and calls Groq, so these
+# put a ceiling on cost. Render sits behind a proxy, so the real visitor IP is
+# read from the X-Forwarded-For header; otherwise every visitor would look the
+# same and share one limit.
+def visitor_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for")
+    return fwd.split(",")[0].strip() if fwd else request.client.host
+
+
+def whole_site(request: Request) -> str:
+    return "whole-site"
+
+
+limiter = Limiter(key_func=visitor_ip)
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+def too_many(request: Request, exc: RateLimitExceeded):
+    # "detail" is the field the dashboard shows, so the visitor sees a clear message.
+    if "day" in str(exc.detail):
+        msg = "The daily question limit has been reached. Please try again tomorrow."
+    else:
+        msg = "Too many questions in a short time. Please wait a minute and try again."
+    return JSONResponse(status_code=429, content={"detail": msg})
+
 
 # Only these sites may call the API from a browser. Without this the page
 # on GitHub Pages gets blocked by the browser before the request is sent.
@@ -48,6 +79,9 @@ def run_sql(sql: str) -> list[dict]:
         server_hostname=os.environ["DATABRICKS_HOST"],
         http_path=os.environ["DATABRICKS_HTTP_PATH"],
         access_token=os.environ["DATABRICKS_TOKEN"],
+        # Stops any single query after 90 seconds, so a heavy query cannot keep
+        # the warehouse busy. Leaves room for a cold start.
+        session_configuration={"STATEMENT_TIMEOUT": "90"},
     ) as conn:
         with conn.cursor() as cur:
             cur.execute(sql)
@@ -121,14 +155,18 @@ def health():
 
 
 @app.get("/data")
-def data():
+@limiter.limit("10/minute;100/day")
+@limiter.limit("300/day", key_func=whole_site)
+def data(request: Request):
     """Every number the dashboard needs, in one call."""
     rows = run_sql("SELECT * FROM permits.gold.ui_summary")
     return {"rows": [{k: clean(v) for k, v in r.items()} for r in rows]}
 
 
 @app.post("/ask")
-def ask(body: Question):
+@limiter.limit("5/minute;30/day")
+@limiter.limit("150/day", key_func=whole_site)
+def ask(request: Request, body: Question):
     question = body.question.strip()
     if not question:
         return {"error": "Ask a question first."}

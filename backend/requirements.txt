@@ -5,3 +5,4 @@ databricks-sql-connector==3.7.0
 sqlglot==26.6.0
 requests==2.32.3
 python-dotenv==1.0.1
+slowapi==0.1.9
