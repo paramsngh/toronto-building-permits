@@ -43,6 +43,11 @@ BLOCKED_FUNCTIONS = {
     "list_secrets", "secret", "ai_query", "ai_gen",
 }
 
+# Whole families of functions, blocked by name prefix. The ai_ functions call paid
+# models (ai_summarize, ai_classify, ai_translate ...), http_ functions can call
+# outside websites, and read_ functions can open files or streams.
+BLOCKED_PREFIXES = ("ai_", "read_", "http_", "remote_", "vector_search")
+
 
 class Rejected(Exception):
     """Raised with a reason the user can be shown."""
@@ -101,7 +106,7 @@ def _check_functions(tree) -> None:
             name = str(node.this).lower()
         else:
             name = (node.sql_name() or "").lower()
-        if name in BLOCKED_FUNCTIONS:
+        if name in BLOCKED_FUNCTIONS or name.startswith(BLOCKED_PREFIXES):
             raise Rejected(f"Function not available: {name}")
 
 
