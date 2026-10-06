@@ -22,6 +22,68 @@ You can explore the answers on the live dashboard, or type a question in plain E
 
 ---
 
+
+## Architecture
+
+```
+City of Toronto Open Data (CSV)
+            │
+            ▼
+   Azure Data Lake Storage Gen2          raw files, never modified
+            │
+            ▼
+   Databricks  ·  bronze                 loaded as text, nothing cleaned
+            │
+            ▼
+   Databricks  ·  silver                 typed, keyed, deduplicated, flagged
+            │
+            ▼
+   Databricks  ·  gold                   star schema, renamed, documented
+            │
+     ┌──────┴───────────────┐
+     ▼                      ▼
+  Web dashboard        Ask the data API
+  (Render)             (Groq + Databricks SQL)
+                            │
+                            ▼
+                     Power BI (next)
+```
+
+Authentication from Databricks to storage uses a Unity Catalog storage credential backed by an Azure managed identity. No access keys exist anywhere in this repository.
+
+---
+
+## Ask the data: AI question answering
+
+The dashboard includes a box where anyone can type a question in plain English, such as "How many permits were issued in Scarborough in 2025?"
+
+1. **Groq writes the SQL.** An open source model running on Groq reads the question along with the gold table and column descriptions, and writes a Databricks SQL query.
+2. **The query is checked.** The SQL is validated before it runs.
+3. **Databricks runs it.** The query runs against the gold layer and the answer comes back with the exact SQL shown, so every answer can be verified.
+
+The column descriptions stored in Unity Catalog are what the model reads in order to write correct SQL, which is why documenting every gold column matters.
+
+---
+
+## Data model
+
+Gold is a star schema. A dimension was only created where it adds information the fact table does not already have, which is why structure type and work type remain plain columns rather than becoming tables of their own.
+
+| Table | Rows | Contents |
+|---|---|---|
+| `fact_permits` | 152,937 | One row per permit revision, applied for 2020 onward |
+| `dim_date` | 2,557 | One row per day, with year, quarter, month and weekday |
+| `dim_status` | 30 | Each status mapped to a broader stage |
+| `dim_permit_type` | 16 | Each type marked as a main or secondary permit |
+| `dim_postal_area` | 98 | Each postal area mapped to a region |
+| `approval_trend` | 5 | Median and average days to issue, by year |
+| `ui_summary` | 96 | Region and year totals that power the web dashboard |
+| `dq_results` | grows | Quality metrics appended on every run |
+
+Relationships are many to one from the fact table to each dimension. `dim_date` connects three times, to application, issued and completed dates, so the same calendar can answer "applied for in March" and "issued in March" as separate questions.
+
+---
+
 ## Headline finding
 
 Median days from application to permit issued, for permits applied for between 2020 and 2024:
@@ -87,66 +149,6 @@ The headline finding table counts permits that were **issued**. The dashboard co
 
 ---
 
-## Architecture
-
-```
-City of Toronto Open Data (CSV)
-            │
-            ▼
-   Azure Data Lake Storage Gen2          raw files, never modified
-            │
-            ▼
-   Databricks  ·  bronze                 loaded as text, nothing cleaned
-            │
-            ▼
-   Databricks  ·  silver                 typed, keyed, deduplicated, flagged
-            │
-            ▼
-   Databricks  ·  gold                   star schema, renamed, documented
-            │
-     ┌──────┴───────────────┐
-     ▼                      ▼
-  Web dashboard        Ask the data API
-  (Render)             (Groq + Databricks SQL)
-                            │
-                            ▼
-                     Power BI (next)
-```
-
-Authentication from Databricks to storage uses a Unity Catalog storage credential backed by an Azure managed identity. No access keys exist anywhere in this repository.
-
----
-
-## Ask the data: AI question answering
-
-The dashboard includes a box where anyone can type a question in plain English, such as "How many permits were issued in Scarborough in 2025?"
-
-1. **Groq writes the SQL.** An open source model running on Groq reads the question along with the gold table and column descriptions, and writes a Databricks SQL query.
-2. **The query is checked.** The SQL is validated before it runs.
-3. **Databricks runs it.** The query runs against the gold layer and the answer comes back with the exact SQL shown, so every answer can be verified.
-
-The column descriptions stored in Unity Catalog are what the model reads in order to write correct SQL, which is why documenting every gold column matters.
-
----
-
-## Data model
-
-Gold is a star schema. A dimension was only created where it adds information the fact table does not already have, which is why structure type and work type remain plain columns rather than becoming tables of their own.
-
-| Table | Rows | Contents |
-|---|---|---|
-| `fact_permits` | 152,937 | One row per permit revision, applied for 2020 onward |
-| `dim_date` | 2,557 | One row per day, with year, quarter, month and weekday |
-| `dim_status` | 30 | Each status mapped to a broader stage |
-| `dim_permit_type` | 16 | Each type marked as a main or secondary permit |
-| `dim_postal_area` | 98 | Each postal area mapped to a region |
-| `approval_trend` | 5 | Median and average days to issue, by year |
-| `ui_summary` | 96 | Region and year totals that power the web dashboard |
-| `dq_results` | grows | Quality metrics appended on every run |
-
-Relationships are many to one from the fact table to each dimension. `dim_date` connects three times, to application, issued and completed dates, so the same calendar can answer "applied for in March" and "issued in March" as separate questions.
-
----
 
 ## Data quality findings
 
